@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/docker/syntaxes/docker.tmLanguage.json",
+      "name": "dockerfile",
+      "scopeName": "source.dockerfile",
+      "languageConfiguration": "textmate/docker/language-configuration.json"
+    }
+  ]
+}

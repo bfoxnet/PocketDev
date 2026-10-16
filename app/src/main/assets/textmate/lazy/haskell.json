@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/haskell/syntaxes/haskell.tmLanguage.json",
+      "name": "haskell",
+      "scopeName": "source.haskell",
+      "languageConfiguration": "textmate/haskell/language-configuration.json"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/javascript/syntaxes/JavaScript.tmLanguage.json",
+      "name": "javascript",
+      "scopeName": "source.js",
+      "languageConfiguration": "textmate/javascript/language-configuration.json"
+    },
+    {
+      "grammar": "textmate/svelte/syntaxes/svelte.tmLanguage.json",
+      "name": "svelte",
+      "scopeName": "source.svelte",
+      "embeddedLanguages": {
+        "source.js": "javascript"
+      }
+    }
+  ]
+}

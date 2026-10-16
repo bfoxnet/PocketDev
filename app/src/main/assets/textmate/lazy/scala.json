@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/scala/syntaxes/scala.tmLanguage.json",
+      "name": "scala",
+      "scopeName": "source.scala",
+      "languageConfiguration": "textmate/scala/language-configuration.json"
+    }
+  ]
+}

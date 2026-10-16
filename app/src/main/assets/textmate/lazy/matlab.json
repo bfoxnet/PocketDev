@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/matlab/syntaxes/Matlab.tmLanguage",
+      "name": "matlab",
+      "scopeName": "source.matlab",
+      "languageConfiguration": "textmate/matlab/language-configuration.json"
+    }
+  ]
+}

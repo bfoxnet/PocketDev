@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Kotlin
+.kotlin/
+
+# Android SDK / local config
+local.properties
+
+# Build artifacts
+*.apk
+*.aab
+pocketdev.zip
+
+# IDE
+.idea/
+*.iml
+
+# Logs
+*.log

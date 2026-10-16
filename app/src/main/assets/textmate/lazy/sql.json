@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/sql/syntaxes/sql.tmLanguage.json",
+      "name": "sql",
+      "scopeName": "source.sql",
+      "languageConfiguration": "textmate/sql/language-configuration.json"
+    }
+  ]
+}

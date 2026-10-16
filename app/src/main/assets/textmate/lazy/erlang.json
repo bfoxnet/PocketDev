@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/erlang/syntaxes/Erlang.plist",
+      "name": "erlang",
+      "scopeName": "source.erlang",
+      "languageConfiguration": "textmate/erlang/language-configuration.json"
+    }
+  ]
+}

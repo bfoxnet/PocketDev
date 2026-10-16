@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Top MaterialToolbar Action Icons: [Run ▶] [Search] [Save] [Terminal] -->
+    <item
+        android:id="@+id/action_run"
+        android:title="@string/menu_run"
+        android:icon="@drawable/ic_play"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_search"
+        android:title="@string/menu_search"
+        android:icon="@drawable/ic_search"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_save"
+        android:title="@string/menu_save"
+        android:icon="@drawable/ic_save"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_terminal"
+        android:title="@string/menu_terminal"
+        android:icon="@drawable/ic_terminal"
+        app:showAsAction="always" />
+
+    <!-- Overflow Menu (⋮) Items -->
+    <item
+        android:id="@+id/action_run_config"
+        android:title="@string/menu_run_config"
+        android:icon="@drawable/ic_play"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_format_document"
+        android:title="@string/menu_format_document"
+        android:icon="@drawable/ic_indent"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_lsp_refactor"
+        android:title="@string/menu_lsp_refactor"
+        android:icon="@drawable/ic_lsp"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_github"
+        android:title="@string/menu_github"
+        android:icon="@drawable/ic_folder"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_undo"
+        android:title="@string/menu_undo"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_redo"
+        android:title="@string/menu_redo"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_project_search"
+        android:title="@string/menu_project_search"
+        android:icon="@drawable/ic_replace"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_open"
+        android:title="@string/menu_open"
+        android:icon="@drawable/ic_folder"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_open_folder"
+        android:title="@string/menu_open_folder"
+        android:icon="@drawable/ic_folder"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_theme"
+        android:title="@string/settings_title"
+        android:icon="@drawable/ic_settings"
+        app:showAsAction="never" />
+</menu>

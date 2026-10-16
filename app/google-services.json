@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "217898239382",
+    "project_id": "pocketdev-b68e0",
+    "storage_bucket": "pocketdev-b68e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:217898239382:android:69dee755912172b89c89b7",
+        "android_client_info": {
+          "package_name": "com.bfoxnet.pocketdev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBh8q7Ev19-zMmKW3U0Xv_MT9vE96qzTjM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

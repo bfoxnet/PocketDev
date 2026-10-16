@@ -1,0 +1,37 @@
+[versions]
+agp = "8.8.0"
+kotlin = "2.1.21"
+coreKtx = "1.16.0"
+appcompat = "1.7.1"
+material = "1.12.0"
+constraintlayout = "2.2.1"
+activity = "1.10.1"
+soraEditor = "0.23.6"
+desugar = "2.1.5"
+tukaaniXz = "1.10"
+googleServices = "4.4.2"
+firebaseCrashlyticsPlugin = "3.0.2"
+firebaseBom = "33.7.0"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+androidx-activity = { module = "androidx.activity:activity-ktx", version.ref = "activity" }
+sora-editor = { module = "io.github.Rosemoe.sora-editor:editor", version.ref = "soraEditor" }
+sora-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate", version.ref = "soraEditor" }
+sora-java = { module = "io.github.Rosemoe.sora-editor:language-java", version.ref = "soraEditor" }
+sora-monarch = { module = "io.github.Rosemoe.sora-editor:language-monarch", version.ref = "soraEditor" }
+monarch-language-pack = { module = "io.github.dingyi222666.monarch:monarch-language-pack", version = "1.0.2" }
+desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaaniXz" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlyticsPlugin" }

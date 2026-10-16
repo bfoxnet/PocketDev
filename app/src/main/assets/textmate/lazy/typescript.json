@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/typescript/syntaxes/typescript.tmLanguage.json",
+      "name": "typescript",
+      "scopeName": "source.ts",
+      "languageConfiguration": "textmate/typescript/language-configuration.json"
+    }
+  ]
+}

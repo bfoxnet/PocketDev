@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.PocketDev" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/surface</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceContainer">@color/surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_container_high</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="android:colorBackground">@color/chrome_background</item>
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:windowLightStatusBar">@bool/light_status</item>
+        <item name="android:navigationBarColor">@color/status_bar</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/light_status</item>
+        <item name="actionMenuTextColor">@color/on_surface</item>
+
+        <!-- Compact, modern Three-Dot Overflow & Popup Menu styling (smaller font & compact rows) -->
+        <item name="popupMenuStyle">@style/PocketDev.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/PocketDev.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/PocketDev.OverflowMenu</item>
+        <item name="textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="android:textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="android:textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="listPreferredItemHeightSmall">36dp</item>
+        <item name="android:listPreferredItemHeightSmall">36dp</item>
+    </style>
+
+    <!-- Compact 12.5sp typography for Three-Dot Overflow Menu & Popup Menus -->
+    <style name="PocketDev.PopupMenuTextAppearance" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="PocketDev.PopupMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_modern_popup_menu</item>
+        <item name="android:dropDownVerticalOffset">4dp</item>
+    </style>
+
+    <style name="PocketDev.OverflowMenu" parent="Widget.Material3.PopupMenu.Overflow">
+        <item name="android:popupBackground">@drawable/bg_modern_popup_menu</item>
+        <item name="android:dropDownVerticalOffset">4dp</item>
+    </style>
+
+    <!-- Compact Toolbar Title & Subtitle TextAppearances (fixes oversized subtitle on DiagActivity & toolbars) -->
+    <style name="PocketDev.ToolbarTitle" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="PocketDev.ToolbarSubtitle" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">10.5sp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- Compact Top MaterialToolbar Style (Row 1 of AppBarLayout) -->
+    <style name="AndroidIDE.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:minHeight">44dp</item>
+        <item name="titleTextAppearance">@style/PocketDev.ToolbarTitle</item>
+        <item name="subtitleTextAppearance">@style/PocketDev.ToolbarSubtitle</item>
+        <item name="contentInsetStartWithNavigation">0dp</item>
+        <item name="buttonGravity">center_vertical</item>
+        <item name="popupTheme">@style/PocketDev.ToolbarPopupTheme</item>
+    </style>
+
+    <style name="PocketDev.ToolbarPopupTheme" parent="ThemeOverlay.Material3.DynamicColors.DayNight">
+        <item name="popupMenuStyle">@style/PocketDev.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/PocketDev.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/PocketDev.OverflowMenu</item>
+        <item name="textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="android:textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="android:textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
+        <item name="listPreferredItemHeightSmall">36dp</item>
+        <item name="android:listPreferredItemHeightSmall">36dp</item>
+    </style>
+
+    <!-- File TabLayout Style (Row 2 of AppBarLayout) -->
+    <style name="AndroidIDE.FileTabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabMode">scrollable</item>
+        <item name="tabGravity">start</item>
+        <item name="tabInlineLabel">true</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabIndicatorHeight">3dp</item>
+        <item name="tabIndicatorColor">@color/tab_indicator</item>
+        <item name="tabTextAppearance">@style/AndroidIDE.TabTextAppearance</item>
+        <item name="tabMinWidth">0dp</item>
+        <item name="tabPaddingStart">10dp</item>
+        <item name="tabPaddingEnd">6dp</item>
+        <item name="tabPaddingTop">0dp</item>
+        <item name="tabPaddingBottom">0dp</item>
+    </style>
+
+    <!-- Bottom Sheet TabLayout Style -->
+    <style name="AndroidIDE.BottomSheetTabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabMode">scrollable</item>
+        <item name="tabGravity">start</item>
+        <item name="tabInlineLabel">true</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabIndicatorHeight">2dp</item>
+        <item name="tabIndicatorColor">@color/tab_indicator</item>
+        <item name="tabTextAppearance">@style/AndroidIDE.BottomSheetTabText</item>
+        <item name="tabMinWidth">0dp</item>
+        <item name="tabPaddingStart">12dp</item>
+        <item name="tabPaddingEnd">12dp</item>
+    </style>
+
+    <style name="AndroidIDE.TabTextAppearance" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">12sp</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <style name="AndroidIDE.BottomSheetTabText" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">11.5sp</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <!-- Borderless icon button for compact IDE toolbars -->
+    <style name="PocketDev.IconButton" parent="">
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">centerInside</item>
+    </style>
+
+    <!-- Settings rows -->
+    <style name="PocketDev.PrefRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">12dp</item>
+        <item name="android:minHeight">54dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
+
+    <style name="PocketDev.PrefTitle" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="PocketDev.PrefSubtitle" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <style name="PocketDev.PrefValue" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+        <item name="android:layout_marginStart">12dp</item>
+    </style>
+</resources>

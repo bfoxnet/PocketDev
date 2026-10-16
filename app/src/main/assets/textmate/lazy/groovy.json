@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/groovy/syntaxes/groovy.tmLanguage.json",
+      "name": "groovy",
+      "scopeName": "source.groovy",
+      "languageConfiguration": "textmate/groovy/language-configuration.json"
+    }
+  ]
+}

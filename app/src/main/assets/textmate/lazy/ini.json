@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/ini/syntaxes/ini.tmLanguage.json",
+      "name": "ini",
+      "scopeName": "source.ini",
+      "languageConfiguration": "textmate/ini/language-configuration.json"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/vue-html/syntaxes/vue-html.tmLanguage.json",
+      "name": "vue-html",
+      "scopeName": "text.html.vue-html",
+      "languageConfiguration": "textmate/vue-html/language-configuration.json"
+    },
+    {
+      "grammar": "textmate/javascript/syntaxes/JavaScript.tmLanguage.json",
+      "name": "javascript",
+      "scopeName": "source.js",
+      "languageConfiguration": "textmate/javascript/language-configuration.json"
+    },
+    {
+      "grammar": "textmate/vue/syntaxes/vue.tmLanguage.json",
+      "name": "vue",
+      "scopeName": "source.vue",
+      "languageConfiguration": "textmate/vue/language-configuration.json",
+      "embeddedLanguages": {
+        "text.html.vue-html": "vue-html",
+        "source.js": "javascript"
+      }
+    }
+  ]
+}

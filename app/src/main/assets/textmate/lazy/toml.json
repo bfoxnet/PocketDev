@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/toml/syntaxes/TOML.tmLanguage",
+      "name": "toml",
+      "scopeName": "source.toml",
+      "languageConfiguration": "textmate/toml/language-configuration.json"
+    }
+  ]
+}

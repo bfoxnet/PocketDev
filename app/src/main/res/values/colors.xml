@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AndroidIDE Material 3 Light Palette (Lightly Orange App UI Primary) -->
+    <color name="accent">#E66000</color>
+    <color name="accent_light">#FF9800</color>
+    <color name="tab_indicator">#E66000</color>
+    <color name="ic_launcher_background">#141318</color>
+
+    <color name="surface">#F8F9FA</color>
+    <color name="surface_container">#F1F3F4</color>
+    <color name="surface_container_high">#E8EAED</color>
+    <color name="on_surface">#1C1B1F</color>
+    <color name="on_surface_variant">#49454F</color>
+    <color name="outline">#CAC4D0</color>
+    <color name="chrome_background">#F1F3F4</color>
+    <color name="status_bar">#F1F3F4</color>
+    <color name="on_status_bar">#1C1B1F</color>
+    <color name="editor_surface">#FFFFFF</color>
+    <color name="symbol_bar">#E8EAED</color>
+</resources>

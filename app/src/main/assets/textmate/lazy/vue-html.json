@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/vue-html/syntaxes/vue-html.tmLanguage.json",
+      "name": "vue-html",
+      "scopeName": "text.html.vue-html",
+      "languageConfiguration": "textmate/vue-html/language-configuration.json"
+    }
+  ]
+}

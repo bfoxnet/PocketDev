@@ -1,0 +1,10 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/scss/syntaxes/scss.tmLanguage.json",
+      "name": "scss",
+      "scopeName": "source.scss",
+      "languageConfiguration": "textmate/scss/language-configuration.json"
+    }
+  ]
+}
