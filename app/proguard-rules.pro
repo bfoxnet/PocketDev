@@ -5,3 +5,7 @@
 
 # Kotlin coroutines / metadata used by the editor's event system
 -dontwarn kotlinx.coroutines.**
+
+# R8: sora editor's ShareableData$DefaultImpls references kotlin.Cloneable$DefaultImpls
+# (a Kotlin-internal class absent at runtime) — safe to ignore.
+-dontwarn kotlin.Cloneable$DefaultImpls
