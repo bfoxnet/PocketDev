@@ -16,18 +16,26 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.annotation.DrawableRes
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 
 /**
- * Modern Material 3 Context Menu, Action Sheet, Confirmation Dialog, Input Dialog, and Choice Picker UI builder.
+ * Modern Material 3 Bottom Sheet, Context Menu, Action Sheet, Confirmation Dialog, Input Dialog,
+ * and Choice Picker UI builder.
  *
- * Uses the lightly orange App UI primary palette (`#FFB74D` in dark mode, `#E66000` in light mode)
- * while keeping Sora Editor syntax colors independent.
+ * Upgraded UX Architecture:
+ * - Context menus, single-choice pickers, and custom workflow panels use Material 3 [BottomSheetDialog]
+ *   with a top drag-handle pill, rounded 22dp top corners, expanded state by default, and thumb-friendly
+ *   46dp+ touch targets for effortless one-handed mobile ergonomics.
+ * - Uses the lightly orange App UI primary palette (`#FFB74D` in dark mode, `#E66000` in light mode)
+ *   while keeping Sora Editor syntax colors independent.
  */
 object ModernUiHelper {
 
@@ -98,6 +106,67 @@ object ModernUiHelper {
     }
 
     /**
+     * Wraps any custom [contentView] inside a themed Material 3 [BottomSheetDialog] with a top drag pill,
+     * rounded 22dp top corners, and automatic expanded state so modals never have double borders or
+     * awkward floating clipping on smaller screens.
+     */
+    fun showModernCustomBottomSheet(
+        context: Context,
+        contentView: View,
+        palette: Palette = resolvePalette(context),
+        cancelable: Boolean = true
+    ): BottomSheetDialog {
+        val density = context.resources.displayMetrics.density
+        val sheetDialog = BottomSheetDialog(context)
+        sheetDialog.setCancelable(cancelable)
+
+        val wrapper = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, (10 * density).toInt(), 0, (12 * density).toInt())
+            val r = 22f * density
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                setColor(palette.cardBg)
+                setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
+            }
+        }
+
+        // Top drag handle pill
+        val dragPill = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 3f * density
+                setColor(withAlpha(palette.subtleColor, 0x70))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                (38 * density).toInt(),
+                (4 * density).toInt()
+            ).apply {
+                bottomMargin = (8 * density).toInt()
+            }
+        }
+        wrapper.addView(dragPill)
+        wrapper.addView(
+            contentView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        sheetDialog.setContentView(wrapper)
+        sheetDialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
+        sheetDialog.behavior.apply {
+            skipCollapsed = true
+            state = BottomSheetBehavior.STATE_EXPANDED
+        }
+        sheetDialog.show()
+        return sheetDialog
+    }
+
+    /**
      * Shows a modern Material 3 confirmation dialog for File and Folder deletion (or project/environment actions).
      */
     fun showModernConfirmDialog(
@@ -118,14 +187,14 @@ object ModernUiHelper {
         val rootCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(
+                (20 * density).toInt(),
                 (18 * density).toInt(),
-                (16 * density).toInt(),
-                (18 * density).toInt(),
-                (14 * density).toInt()
+                (20 * density).toInt(),
+                (16 * density).toInt()
             )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * density
+                cornerRadius = 20f * density
                 setColor(palette.cardBg)
                 setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
             }
@@ -143,10 +212,10 @@ object ModernUiHelper {
                 setImageResource(iconRes)
                 imageTintList = ColorStateList.valueOf(actionColor)
                 setPadding(
-                    (6 * density).toInt(),
-                    (6 * density).toInt(),
-                    (6 * density).toInt(),
-                    (6 * density).toInt()
+                    (7 * density).toInt(),
+                    (7 * density).toInt(),
+                    (7 * density).toInt(),
+                    (7 * density).toInt()
                 )
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
@@ -154,8 +223,8 @@ object ModernUiHelper {
                     setColor(withAlpha(actionColor, 0x22))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    (32 * density).toInt(),
-                    (32 * density).toInt()
+                    (36 * density).toInt(),
+                    (36 * density).toInt()
                 ).apply {
                     marginEnd = (12 * density).toInt()
                 }
@@ -165,7 +234,7 @@ object ModernUiHelper {
 
         val titleView = MaterialTextView(context).apply {
             text = title
-            textSize = 15f
+            textSize = 15.5f
             setTextColor(palette.fgColor)
             setTypeface(typeface, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -173,14 +242,24 @@ object ModernUiHelper {
         headerRow.addView(titleView)
         rootCard.addView(headerRow)
 
+        val messageScroll = ScrollView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                weight = 1f
+            }
+        }
         val messageView = MaterialTextView(context).apply {
             text = message
-            textSize = 12.5f
+            textSize = 13f
             setTextColor(palette.subtleColor)
-            setLineSpacing(2f * density, 1.05f)
+            setLineSpacing(2.5f * density, 1.08f)
             setPadding(0, (12 * density).toInt(), 0, (16 * density).toInt())
+            setTextIsSelectable(true)
         }
-        rootCard.addView(messageView)
+        messageScroll.addView(messageView)
+        rootCard.addView(messageScroll)
 
         val btnRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -193,11 +272,11 @@ object ModernUiHelper {
             com.google.android.material.R.attr.borderlessButtonStyle
         ).apply {
             text = cancelText
-            textSize = 12f
+            textSize = 12.5f
             isAllCaps = false
             setTextColor(palette.subtleColor)
-            minHeight = (36 * density).toInt()
-            minimumHeight = (36 * density).toInt()
+            minHeight = (40 * density).toInt()
+            minimumHeight = (40 * density).toInt()
             setOnClickListener { dialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
@@ -208,17 +287,17 @@ object ModernUiHelper {
             com.google.android.material.R.attr.materialButtonStyle
         ).apply {
             text = confirmText
-            textSize = 12f
+            textSize = 12.5f
             isAllCaps = false
-            minHeight = (36 * density).toInt()
-            minimumHeight = (36 * density).toInt()
+            minHeight = (40 * density).toInt()
+            minimumHeight = (40 * density).toInt()
             backgroundTintList = ColorStateList.valueOf(actionColor)
             setTextColor(if (isDestructive) Color.WHITE else palette.surfaceBg)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                marginStart = (6 * density).toInt()
+                marginStart = (8 * density).toInt()
             }
             setOnClickListener {
                 dialog.dismiss()
@@ -229,13 +308,13 @@ object ModernUiHelper {
 
         rootCard.addView(btnRow)
         dialog.setContentView(rootCard)
-        configureDialogWindow(dialog, context, maxWidthDp = 340)
+        configureDialogWindow(dialog, context, maxWidthDp = 360)
         dialog.show()
     }
 
     /**
-     * Displays a sleek, modern Material 3 context menu dialog with optional header icon,
-     * subtitle, compact 13sp rows, vector icons, and destructive item styling.
+     * Displays a sleek Material 3 BottomSheet action menu with a drag handle pill, optional header icon,
+     * subtitle, accessible 46dp+ touch rows, vector icons, and destructive item styling.
      */
     fun showModernContextMenu(
         context: Context,
@@ -246,27 +325,48 @@ object ModernUiHelper {
         options: List<MenuOption>
     ) {
         val density = context.resources.displayMetrics.density
-        val dialog = Dialog(context)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        val sheetDialog = BottomSheetDialog(context)
 
         val rootCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, (12 * density).toInt(), 0, (10 * density).toInt())
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, (10 * density).toInt(), 0, (14 * density).toInt())
+            val r = 22f * density
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * density
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
                 setColor(palette.cardBg)
                 setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
             }
         }
 
+        // Top drag handle pill
+        val dragPill = View(context).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 3f * density
+                setColor(withAlpha(palette.subtleColor, 0x70))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                (38 * density).toInt(),
+                (4 * density).toInt()
+            ).apply {
+                bottomMargin = (10 * density).toInt()
+            }
+        }
+        rootCard.addView(dragPill)
+
         // Header section
         val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
             setPadding(
                 (18 * density).toInt(),
-                (4 * density).toInt(),
+                (2 * density).toInt(),
                 (18 * density).toInt(),
                 (10 * density).toInt()
             )
@@ -277,10 +377,10 @@ object ModernUiHelper {
                 setImageResource(headerIconRes)
                 imageTintList = ColorStateList.valueOf(palette.accentColor)
                 setPadding(
-                    (6 * density).toInt(),
-                    (6 * density).toInt(),
-                    (6 * density).toInt(),
-                    (6 * density).toInt()
+                    (7 * density).toInt(),
+                    (7 * density).toInt(),
+                    (7 * density).toInt(),
+                    (7 * density).toInt()
                 )
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
@@ -288,8 +388,8 @@ object ModernUiHelper {
                     setColor(withAlpha(palette.accentColor, 0x22))
                 }
                 layoutParams = LinearLayout.LayoutParams(
-                    (32 * density).toInt(),
-                    (32 * density).toInt()
+                    (36 * density).toInt(),
+                    (36 * density).toInt()
                 ).apply {
                     marginEnd = (12 * density).toInt()
                 }
@@ -303,7 +403,7 @@ object ModernUiHelper {
         }
         val titleView = MaterialTextView(context).apply {
             text = title
-            textSize = 14f
+            textSize = 15f
             setTextColor(palette.fgColor)
             setTypeface(typeface, Typeface.BOLD)
             setSingleLine(true)
@@ -313,7 +413,7 @@ object ModernUiHelper {
         if (!subtitle.isNullOrBlank()) {
             val subView = MaterialTextView(context).apply {
                 text = subtitle
-                textSize = 11f
+                textSize = 11.5f
                 typeface = Typeface.MONOSPACE
                 setTextColor(palette.subtleColor)
                 setSingleLine(true)
@@ -343,7 +443,7 @@ object ModernUiHelper {
         }
         val listContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding((8 * density).toInt(), (2 * density).toInt(), (8 * density).toInt(), (2 * density).toInt())
+            setPadding((10 * density).toInt(), (2 * density).toInt(), (10 * density).toInt(), (4 * density).toInt())
         }
 
         for (opt in options) {
@@ -356,15 +456,16 @@ object ModernUiHelper {
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = (46 * density).toInt()
                 setPadding(
-                    (12 * density).toInt(),
+                    (14 * density).toInt(),
                     (10 * density).toInt(),
-                    (12 * density).toInt(),
+                    (14 * density).toInt(),
                     (10 * density).toInt()
                 )
                 val baseBg = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 10f * density
+                    cornerRadius = 12f * density
                     setColor(
                         if (opt.isSelected) withAlpha(palette.accentColor, 0x1F)
                         else Color.TRANSPARENT
@@ -375,7 +476,7 @@ object ModernUiHelper {
                     baseBg,
                     GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 10f * density
+                        cornerRadius = 12f * density
                         setColor(Color.WHITE)
                     }
                 )
@@ -383,11 +484,11 @@ object ModernUiHelper {
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = (1 * density).toInt()
-                    bottomMargin = (1 * density).toInt()
+                    topMargin = (2 * density).toInt()
+                    bottomMargin = (2 * density).toInt()
                 }
                 setOnClickListener {
-                    dialog.dismiss()
+                    sheetDialog.dismiss()
                     opt.action()
                 }
             }
@@ -397,10 +498,10 @@ object ModernUiHelper {
                     setImageResource(opt.iconRes)
                     imageTintList = ColorStateList.valueOf(itemColor)
                     layoutParams = LinearLayout.LayoutParams(
-                        (18 * density).toInt(),
-                        (18 * density).toInt()
+                        (20 * density).toInt(),
+                        (20 * density).toInt()
                     ).apply {
-                        marginEnd = (12 * density).toInt()
+                        marginEnd = (14 * density).toInt()
                     }
                 }
                 row.addView(icon)
@@ -412,7 +513,7 @@ object ModernUiHelper {
             }
             val label = MaterialTextView(context).apply {
                 text = opt.title
-                textSize = 13f
+                textSize = 13.5f
                 setTextColor(itemColor)
                 setTypeface(typeface, if (opt.isSelected || opt.isDestructive) Typeface.BOLD else Typeface.NORMAL)
             }
@@ -421,7 +522,7 @@ object ModernUiHelper {
             if (!opt.subtitle.isNullOrBlank()) {
                 val sub = MaterialTextView(context).apply {
                     text = opt.subtitle
-                    textSize = 11f
+                    textSize = 11.5f
                     setTextColor(palette.subtleColor)
                 }
                 textCol.addView(sub)
@@ -431,19 +532,19 @@ object ModernUiHelper {
             if (!opt.badgeText.isNullOrBlank()) {
                 val badge = MaterialTextView(context).apply {
                     text = opt.badgeText
-                    textSize = 9.5f
+                    textSize = 10f
                     setTextColor(palette.accentColor)
                     setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = 6f * density
                         setStroke((1 * density).toInt(), withAlpha(palette.accentColor, 0x66))
-                        setColor(Color.TRANSPARENT)
+                        setColor(withAlpha(palette.accentColor, 0x14))
                     }
                     setPadding(
-                        (6 * density).toInt(),
+                        (7 * density).toInt(),
                         (2 * density).toInt(),
-                        (6 * density).toInt(),
+                        (7 * density).toInt(),
                         (2 * density).toInt()
                     )
                     layoutParams = LinearLayout.LayoutParams(
@@ -457,9 +558,13 @@ object ModernUiHelper {
             if (opt.isSelected) {
                 val checkBadge = MaterialTextView(context).apply {
                     text = "✓"
-                    textSize = 13f
+                    textSize = 14f
                     setTextColor(palette.accentColor)
                     setTypeface(typeface, Typeface.BOLD)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginStart = (8 * density).toInt() }
                 }
                 row.addView(checkBadge)
             }
@@ -470,13 +575,17 @@ object ModernUiHelper {
         scroll.addView(listContainer)
         rootCard.addView(scroll)
 
-        dialog.setContentView(rootCard)
-        configureDialogWindow(dialog, context, maxWidthDp = 330)
-        dialog.show()
+        sheetDialog.setContentView(rootCard)
+        sheetDialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
+        sheetDialog.behavior.apply {
+            skipCollapsed = true
+            state = BottomSheetBehavior.STATE_EXPANDED
+        }
+        sheetDialog.show()
     }
 
     /**
-     * Shows a modern single-choice picker dialog with a check indicator on the active item.
+     * Shows a modern single-choice picker bottom sheet with a check indicator on the active item.
      */
     fun showModernSingleChoiceDialog(
         context: Context,
@@ -541,14 +650,14 @@ object ModernUiHelper {
         val rootCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(
+                (20 * density).toInt(),
                 (18 * density).toInt(),
-                (16 * density).toInt(),
-                (18 * density).toInt(),
-                (14 * density).toInt()
+                (20 * density).toInt(),
+                (16 * density).toInt()
             )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * density
+                cornerRadius = 20f * density
                 setColor(palette.cardBg)
                 setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
             }
@@ -556,7 +665,7 @@ object ModernUiHelper {
 
         val titleView = MaterialTextView(context).apply {
             text = title
-            textSize = 15f
+            textSize = 15.5f
             setTextColor(palette.fgColor)
             setTypeface(typeface, Typeface.BOLD)
         }
@@ -584,15 +693,15 @@ object ModernUiHelper {
             imeOptions = EditorInfo.IME_ACTION_DONE
             setPadding(
                 (12 * density).toInt(),
-                (10 * density).toInt(),
+                (11 * density).toInt(),
                 (12 * density).toInt(),
-                (10 * density).toInt()
+                (11 * density).toInt()
             )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 10f * density
                 setColor(palette.surfaceBg)
-                setStroke((1.2f * density).toInt().coerceAtLeast(1), palette.accentColor)
+                setStroke((1.5f * density).toInt().coerceAtLeast(1), palette.accentColor)
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -627,8 +736,8 @@ object ModernUiHelper {
                 textSize = 12f
                 isAllCaps = false
                 setTextColor(palette.accentColor)
-                minHeight = (36 * density).toInt()
-                minimumHeight = (36 * density).toInt()
+                minHeight = (38 * density).toInt()
+                minimumHeight = (38 * density).toInt()
                 setOnClickListener {
                     val v = input.text?.toString()?.trim() ?: ""
                     dialog.dismiss()
@@ -652,8 +761,8 @@ object ModernUiHelper {
             textSize = 12f
             isAllCaps = false
             setTextColor(palette.subtleColor)
-            minHeight = (36 * density).toInt()
-            minimumHeight = (36 * density).toInt()
+            minHeight = (38 * density).toInt()
+            minimumHeight = (38 * density).toInt()
             setOnClickListener { dialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
@@ -666,8 +775,8 @@ object ModernUiHelper {
             text = positiveText
             textSize = 12f
             isAllCaps = false
-            minHeight = (36 * density).toInt()
-            minimumHeight = (36 * density).toInt()
+            minHeight = (38 * density).toInt()
+            minimumHeight = (38 * density).toInt()
             backgroundTintList = ColorStateList.valueOf(palette.accentColor)
             setTextColor(palette.surfaceBg)
             layoutParams = LinearLayout.LayoutParams(
@@ -697,7 +806,7 @@ object ModernUiHelper {
 
         rootCard.addView(btnRow)
         dialog.setContentView(rootCard)
-        configureDialogWindow(dialog, context, maxWidthDp = 340, showKeyboard = true)
+        configureDialogWindow(dialog, context, maxWidthDp = 360, showKeyboard = true)
         dialog.show()
         input.requestFocus()
     }
@@ -711,13 +820,13 @@ object ModernUiHelper {
         val win = dialog.window ?: return
         win.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         val dm = context.resources.displayMetrics
-        val targetWidth = minOf((dm.widthPixels * 0.88f).toInt(), (maxWidthDp * dm.density).toInt())
+        val targetWidth = minOf((dm.widthPixels * 0.90f).toInt(), (maxWidthDp * dm.density).toInt())
         win.setLayout(targetWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
         if (showKeyboard) {
             win.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         }
     }
 
-    private fun withAlpha(color: Int, alpha: Int): Int =
+    fun withAlpha(color: Int, alpha: Int): Int =
         Color.argb(alpha.coerceIn(0, 255), Color.red(color), Color.green(color), Color.blue(color))
 }

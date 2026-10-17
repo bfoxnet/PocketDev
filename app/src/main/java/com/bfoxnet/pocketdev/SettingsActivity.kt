@@ -1,36 +1,34 @@
 package com.bfoxnet.pocketdev
 
-import android.app.Dialog
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.view.Window
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.WindowCompat
 import com.bfoxnet.pocketdev.databinding.ActivitySettingsBinding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
+import kotlin.math.roundToInt
 
 /**
- * Organized PocketDev Settings screen (with all legacy/dummy QEMU & Alpine references removed):
- * 1. Appearance (Color Scheme, Editor & Terminal Font, Font Size)
- * 2. Code Editor & Auto-Save (Auto-Save Modified Files, Auto-Save Delay, Save All Open Files on Save Press, Font Ligatures, Word Wrap)
- * 3. Terminal & Zsh Shell (Default Linux Shell [Zsh + Plugins / Bash], Terminal Color Theme, Cursor Style, Helper Keyboard Toolbar, Keep Screen On, Edit termux.properties)
- * 4. Ubuntu 24.04 LTS • PRoot & Zsh Environment (Host Architecture, Ubuntu Projects Directory `/root/projects`, Install/Sync Real Zsh & Plugins, Install/Repair Ubuntu 24.04.5 LTS Rootfs + PRoot)
- * 5. Environment & Tools (Language Servers, Open Ubuntu 24.04 Zsh Terminal in Active Project)
+ * Organized PocketDev Settings screen with a Live Code Preview card, inline Font Size Slider,
+ * and all Editor & Terminal controls promoted to first-class settings rows:
+ * 1. Appearance (Live Code Preview Card, Color Scheme, Editor & Terminal Font, Inline Font Size Slider)
+ * 2. Code Editor & Auto-Save (Auto-Save, Delay, Save All, Ligatures, Word Wrap, Sticky-Scroll, Word-Match Highlight, Code Folding)
+ * 3. Terminal & Zsh Shell (Default Shell, Theme, Cursor, Haptic Feedback, Extra-Keys Toolbar, Sticky CTRL, Auto Wake-Lock, Keep Screen On, termux.properties)
+ * 4. Ubuntu 24.04 LTS • PRoot & Zsh Environment (Host Architecture, Projects Dir, Zsh & Plugins, Rootfs Backup/Restore)
+ * 5. Environment & Tools (Language Servers, Open Terminal)
  * 6. System & About (Editor Diagnostics, About PocketDev)
  */
 class SettingsActivity : AppCompatActivity() {
@@ -142,7 +140,6 @@ class SettingsActivity : AppCompatActivity() {
         val chrome = Color.parseColor(theme.ui.chromeBg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        // Lightly orange App UI primary accent color
         val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
         val density = resources.displayMetrics.density
 
@@ -161,6 +158,16 @@ class SettingsActivity : AppCompatActivity() {
             controller.isAppearanceLightStatusBars = !theme.dark
             controller.isAppearanceLightNavigationBars = !theme.dark
         }
+
+        // Style Live Preview Card
+        binding.cardLivePreview.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 14f * density
+            setColor(surface)
+            setStroke((1.5f * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accent, 0x77))
+        }
+        binding.previewBadge.setTextColor(accent)
+        binding.previewCodeText.setTextColor(fg)
 
         val headers = listOf(
             binding.headerAppearance,
@@ -197,6 +204,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.titleDefaultShell,
             binding.titleTerminalStyle,
             binding.titleTerminalCursor,
+            binding.titleHapticFeedback,
             binding.titleTermuxProps,
             binding.titleUbuntuArch,
             binding.titleUbuntuProjectsDir,
@@ -217,6 +225,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.subDefaultShell,
             binding.subTerminalStyle,
             binding.subTerminalCursor,
+            binding.subHapticFeedback,
             binding.subTermuxProps,
             binding.subUbuntuArch,
             binding.subUbuntuProjectsDir,
@@ -237,6 +246,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.valueDefaultShell,
             binding.valueTerminalStyle,
             binding.valueTerminalCursor,
+            binding.valueHapticFeedback,
             binding.valueTermuxProps,
             binding.valueUbuntuArch,
             binding.valueUbuntuProjectsDir,
@@ -248,6 +258,10 @@ class SettingsActivity : AppCompatActivity() {
             binding.valueAbout
         )
         values.forEach { it.setTextColor(accent) }
+
+        binding.sliderFontSize.thumbTintList = ColorStateList.valueOf(accent)
+        binding.sliderFontSize.trackActiveTintList = ColorStateList.valueOf(accent)
+        binding.sliderFontSize.trackInactiveTintList = ColorStateList.valueOf(subtle and 0x44FFFFFF)
 
         val switchThumbStates = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
@@ -266,22 +280,48 @@ class SettingsActivity : AppCompatActivity() {
             binding.switchSaveAllOnSave,
             binding.switchLigatures,
             binding.switchWrap,
+            binding.switchStickyScroll,
+            binding.switchWordMatch,
+            binding.switchCodeFolding,
             binding.switchTerminalToolbar,
+            binding.switchTerminalStickyCtrl,
+            binding.switchTerminalAutoWakelock,
             binding.switchTerminalKeepScreen
         ).forEach { sw ->
             sw.setTextColor(fg)
             sw.thumbTintList = switchThumbStates
             sw.trackTintList = switchTrackStates
         }
+
+        updateLivePreviewCard()
+    }
+
+    private fun updateLivePreviewCard() {
+        val font = Settings.fontById(settings.fontFamily)
+        val tf = runCatching { ResourcesCompat.getFont(this, font.resId) }.getOrNull() ?: Typeface.MONOSPACE
+        binding.previewCodeText.typeface = tf
+        binding.previewCodeText.textSize = settings.fontSizeSp.toFloat()
+        binding.previewCodeText.fontFeatureSettings =
+            if (settings.fontLigatures) "\"liga\" 1, \"calt\" 1" else "\"liga\" 0, \"calt\" 0"
+        binding.previewBadge.text =
+            "LIVE PREVIEW • ${themeLabel(settings.editorTheme).uppercase()} • ${font.label.uppercase()} (${settings.fontSizeSp} SP)"
     }
 
     private fun setupListeners() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        // Section 1: Appearance
+        // Section 1: Appearance & Inline Slider
         binding.rowTheme.setOnClickListener { showThemePicker() }
         binding.rowFont.setOnClickListener { showFontPicker() }
         binding.rowFontSize.setOnClickListener { showFontSizePicker() }
+        binding.sliderFontSize.value = settings.fontSizeSp.coerceIn(10, 24).toFloat()
+        binding.sliderFontSize.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                settings.fontSizeSp = value.roundToInt().coerceIn(10, 24)
+                binding.valueFontSize.text = getString(R.string.font_size_value, settings.fontSizeSp)
+                updateLivePreviewCard()
+            }
+        }
 
         // Section 2: Code Editor & Auto-Save
         binding.switchAutoSave.isChecked = settings.autoSaveEnabled
@@ -301,6 +341,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchLigatures.isChecked = settings.fontLigatures
         binding.switchLigatures.setOnCheckedChangeListener { _, checked ->
             settings.fontLigatures = checked
+            updateLivePreviewCard()
         }
 
         binding.switchWrap.isChecked = settings.wordWrap
@@ -308,14 +349,40 @@ class SettingsActivity : AppCompatActivity() {
             settings.wordWrap = checked
         }
 
+        binding.switchStickyScroll.isChecked = settings.stickyScrollEnabled
+        binding.switchStickyScroll.setOnCheckedChangeListener { _, checked ->
+            settings.stickyScrollEnabled = checked
+        }
+
+        binding.switchWordMatch.isChecked = settings.wordMatchHighlightEnabled
+        binding.switchWordMatch.setOnCheckedChangeListener { _, checked ->
+            settings.wordMatchHighlightEnabled = checked
+        }
+
+        binding.switchCodeFolding.isChecked = settings.codeFoldingEnabled
+        binding.switchCodeFolding.setOnCheckedChangeListener { _, checked ->
+            settings.codeFoldingEnabled = checked
+        }
+
         // Section 3: Terminal & Zsh Shell
         binding.rowDefaultShell.setOnClickListener { showDefaultShellPicker() }
         binding.rowTerminalStyle.setOnClickListener { showTerminalStylePicker() }
         binding.rowTerminalCursor.setOnClickListener { showTerminalCursorPicker() }
+        binding.rowHapticFeedback.setOnClickListener { showHapticFeedbackPicker() }
 
         binding.switchTerminalToolbar.isChecked = settings.terminalToolbarVisible
         binding.switchTerminalToolbar.setOnCheckedChangeListener { _, checked ->
             settings.terminalToolbarVisible = checked
+        }
+
+        binding.switchTerminalStickyCtrl.isChecked = settings.terminalStickyCtrl
+        binding.switchTerminalStickyCtrl.setOnCheckedChangeListener { _, checked ->
+            settings.terminalStickyCtrl = checked
+        }
+
+        binding.switchTerminalAutoWakelock.isChecked = settings.terminalAutoWakeLock
+        binding.switchTerminalAutoWakelock.setOnCheckedChangeListener { _, checked ->
+            settings.terminalAutoWakeLock = checked
         }
 
         binding.switchTerminalKeepScreen.isChecked = settings.terminalKeepScreenOn
@@ -410,6 +477,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.valueTheme.text = themeLabel(settings.editorTheme)
         binding.valueFont.text = Settings.fontById(settings.fontFamily).label
         binding.valueFontSize.text = getString(R.string.font_size_value, settings.fontSizeSp)
+        binding.sliderFontSize.value = settings.fontSizeSp.coerceIn(10, 24).toFloat()
 
         binding.switchAutoSave.isChecked = settings.autoSaveEnabled
         binding.rowAutoSaveDelay.alpha = if (settings.autoSaveEnabled) 1f else 0.5f
@@ -421,6 +489,11 @@ class SettingsActivity : AppCompatActivity() {
             else -> "${settings.autoSaveDelayMs} ms"
         }
         binding.switchSaveAllOnSave.isChecked = settings.saveAllOnSavePress
+        binding.switchLigatures.isChecked = settings.fontLigatures
+        binding.switchWrap.isChecked = settings.wordWrap
+        binding.switchStickyScroll.isChecked = settings.stickyScrollEnabled
+        binding.switchWordMatch.isChecked = settings.wordMatchHighlightEnabled
+        binding.switchCodeFolding.isChecked = settings.codeFoldingEnabled
 
         binding.valueDefaultShell.text =
             if (settings.defaultShell == Settings.SHELL_BASH) "GNU Bash" else "Zsh (robbyrussell)"
@@ -436,7 +509,12 @@ class SettingsActivity : AppCompatActivity() {
             else -> "Block (█)"
         }
 
+        val hapticLabels = listOf("Off", "Light", "Medium", "Strong")
+        binding.valueHapticFeedback.text = hapticLabels.getOrElse(settings.hapticFeedbackLevel) { "Light" }
+
         binding.switchTerminalToolbar.isChecked = settings.terminalToolbarVisible
+        binding.switchTerminalStickyCtrl.isChecked = settings.terminalStickyCtrl
+        binding.switchTerminalAutoWakelock.isChecked = settings.terminalAutoWakeLock
         binding.switchTerminalKeepScreen.isChecked = settings.terminalKeepScreenOn
 
         binding.valueUbuntuArch.text = "${UbuntuProotManager.detectHostAbi()} (${UbuntuProotManager.ubuntuArch()})"
@@ -476,6 +554,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.valueLsp.text = "$installedCount/${LspManager.AVAILABLE_SERVERS.size} active"
         val activeSessions = TerminalActivity.persistentSessions.size
         binding.valueTerminal.text = if (activeSessions > 0) "$activeSessions running" else "Open"
+
+        updateLivePreviewCard()
     }
 
     private fun themeLabel(id: String): String =
@@ -488,7 +568,7 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_theme),
-            subtitle = "Editor Syntax Color Scheme (App UI uses lightly orange accent)",
+            subtitle = "Editor Syntax Color Scheme (updates Live Preview immediately)",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -604,6 +684,26 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun showHapticFeedbackPicker() {
+        val levels = listOf(
+            "Off (No vibration)",
+            "Light (10ms — Default)",
+            "Medium (22ms)",
+            "Strong (38ms)"
+        )
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Extra-Keys & Toolbar Haptics",
+            subtitle = "Tactile feedback intensity",
+            items = levels,
+            checkedIndex = settings.hapticFeedbackLevel.coerceIn(0, 3)
+        ) { which ->
+            settings.hapticFeedbackLevel = which
+            OnboardingAndHapticsHelper.performExtraKeyHaptic(this, binding.rowHapticFeedback)
+            refreshSummary()
+        }
+    }
+
     private fun showUbuntuArchInfo() {
         val hostAbi = UbuntuProotManager.detectHostAbi()
         val uArch = UbuntuProotManager.ubuntuArch()
@@ -628,7 +728,7 @@ class SettingsActivity : AppCompatActivity() {
             "Backup Environment to .tar.gz Archive (Export Rootfs + PRoot via SAF)",
             "Restore Environment from .tar.gz Backup (Import via SAF — Skips Download)",
             "Reinstall Clean Ubuntu 24.04.5 LTS Rootfs (Preserves /root/projects)",
-            "Show Welcome & First-Run Onboarding Guide"
+            "Show Interactive First-Run Onboarding Guide"
         )
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
@@ -656,7 +756,11 @@ class SettingsActivity : AppCompatActivity() {
                     OnboardingAndHapticsHelper.showOnboardingDialog(
                         context = this,
                         onBootstrapNow = { runBootstrapFromSettings(forceReinstall = false) },
-                        onOpenLspManager = { startActivity(Intent(this, LspActivity::class.java)) }
+                        onOpenLspManager = { startActivity(Intent(this, LspActivity::class.java)) },
+                        onThemeChanged = {
+                            applyThemeChrome()
+                            refreshSummary()
+                        }
                     )
                 }
             }
@@ -688,28 +792,16 @@ class SettingsActivity : AppCompatActivity() {
         val propFile = AlpineLinuxEnvironment.termuxPropertiesFile(this)
         val palette = ModernUiHelper.resolvePalette(this)
         val density = resources.displayMetrics.density
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        fun dp(v: Int): Int = (v * density).roundToInt()
 
         val rootCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(
-                (18 * density).toInt(),
-                (16 * density).toInt(),
-                (18 * density).toInt(),
-                (14 * density).toInt()
-            )
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f * density
-                setColor(palette.cardBg)
-                setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
-            }
+            setPadding(dp(18), dp(6), dp(18), dp(14))
         }
 
         val titleView = MaterialTextView(this).apply {
             text = "~/.termux/termux.properties"
-            textSize = 16f
+            textSize = 15.5f
             typeface = Typeface.MONOSPACE
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(palette.fgColor)
@@ -717,55 +809,12 @@ class SettingsActivity : AppCompatActivity() {
         rootCard.addView(titleView)
 
         val subView = MaterialTextView(this).apply {
-            text = "Configure extra-keys haptics, sticky Ctrl, wake-lock, editor aids, and ~/.termux/termux.properties"
-            textSize = 12f
+            text = "Customize extra-keys matrix, terminal margins, cursor blink rate & bell behavior"
+            textSize = 11.5f
             setTextColor(palette.subtleColor)
-            setPadding(0, (2 * density).toInt(), 0, (8 * density).toInt())
+            setPadding(0, dp(2), 0, dp(10))
         }
         rootCard.addView(subView)
-
-        val hapticsRow = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            val hLabels = listOf("Off", "Light (Default)", "Medium", "Strong")
-            text = "Extra Keys Haptic Feedback: ${hLabels.getOrElse(settings.hapticFeedbackLevel) { "Light" }}"
-            isAllCaps = false
-            setTextColor(palette.fgColor)
-            setOnClickListener {
-                settings.hapticFeedbackLevel = (settings.hapticFeedbackLevel + 1) % 4
-                text = "Extra Keys Haptic Feedback: ${hLabels.getOrElse(settings.hapticFeedbackLevel) { "Light" }}"
-                OnboardingAndHapticsHelper.performExtraKeyHaptic(this@SettingsActivity, this)
-            }
-        }
-        rootCard.addView(hapticsRow)
-
-        val stickyCtrlCheck = CheckBox(this).apply {
-            text = "Toggle-Sticky CTRL key (latches until tapped again)"
-            textSize = 12f
-            setTextColor(palette.fgColor)
-            isChecked = settings.terminalStickyCtrl
-            setOnCheckedChangeListener { _, checked -> settings.terminalStickyCtrl = checked }
-        }
-        rootCard.addView(stickyCtrlCheck)
-
-        val autoWakeCheck = CheckBox(this).apply {
-            text = "Auto keep-screen-on & wake-lock while terminal command runs"
-            textSize = 12f
-            setTextColor(palette.fgColor)
-            isChecked = settings.terminalAutoWakeLock
-            setOnCheckedChangeListener { _, checked -> settings.terminalAutoWakeLock = checked }
-        }
-        rootCard.addView(autoWakeCheck)
-
-        val wordMatchCheck = CheckBox(this).apply {
-            text = "Editor: Word-match highlighting & Sticky-scroll headers"
-            textSize = 12f
-            setTextColor(palette.fgColor)
-            isChecked = settings.wordMatchHighlightEnabled && settings.stickyScrollEnabled
-            setOnCheckedChangeListener { _, checked ->
-                settings.wordMatchHighlightEnabled = checked
-                settings.stickyScrollEnabled = checked
-            }
-        }
-        rootCard.addView(wordMatchCheck)
 
         val input = EditText(this).apply {
             setText(runCatching { propFile.readText() }.getOrDefault(""))
@@ -775,7 +824,7 @@ class SettingsActivity : AppCompatActivity() {
             minLines = 8
             maxLines = 14
             gravity = Gravity.TOP or Gravity.START
-            val pad = (10 * density).toInt()
+            val pad = dp(10)
             setPadding(pad, pad, pad, pad)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -786,42 +835,61 @@ class SettingsActivity : AppCompatActivity() {
         }
         rootCard.addView(input)
 
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(this, rootCard, palette)
+
         val btnRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding(0, (12 * density).toInt(), 0, 0)
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, 0)
         }
+
+        val openInEditorBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Open in Editor"
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(palette.accentColor)
+            setOnClickListener {
+                runCatching { propFile.writeText(input.text?.toString() ?: "") }
+                sheetDialog.dismiss()
+                startActivity(
+                    Intent(this@SettingsActivity, MainActivity::class.java).apply {
+                        putExtra(ContinueCodingWidgetProvider.EXTRA_WIDGET_FILE_PATH, propFile.absolutePath)
+                    }
+                )
+                finish()
+            }
+        }
+        btnRow.addView(openInEditorBtn)
+
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+        }
+        btnRow.addView(spacer)
 
         val cancelBtn = MaterialButton(this, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
             text = "Cancel"
+            textSize = 12f
             isAllCaps = false
             setTextColor(palette.subtleColor)
-            setOnClickListener { dialog.dismiss() }
+            setOnClickListener { sheetDialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
 
         val saveBtn = MaterialButton(this).apply {
             text = "Save"
+            textSize = 12f
             isAllCaps = false
-            cornerRadius = (10 * density).toInt()
+            cornerRadius = dp(10)
             backgroundTintList = ColorStateList.valueOf(palette.accentColor)
-            setTextColor(if (EditorController.themeById(settings.editorTheme).dark) Color.parseColor("#2B1700") else Color.WHITE)
+            setTextColor(if (palette.isDark) Color.parseColor("#2B1700") else Color.WHITE)
             setOnClickListener {
                 runCatching { propFile.writeText(input.text?.toString() ?: "") }
-                dialog.dismiss()
+                sheetDialog.dismiss()
                 refreshSummary()
-                Toast.makeText(this@SettingsActivity, "Saved ~/.termux/termux.properties", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SettingsActivity, "Saved ~/.termux/termux.properties ✓", Toast.LENGTH_SHORT).show()
             }
         }
         btnRow.addView(saveBtn)
         rootCard.addView(btnRow)
-
-        dialog.setContentView(rootCard)
-        dialog.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
-            setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-        dialog.show()
     }
 }

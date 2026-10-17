@@ -1,5 +1,6 @@
 package com.bfoxnet.pocketdev
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -7,13 +8,18 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.FileObserver
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -23,8 +29,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.bfoxnet.pocketdev.databinding.ActivityMainBinding
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textview.MaterialTextView
 import io.github.rosemoe.sora.event.ContentChangeEvent
@@ -35,19 +43,21 @@ import io.github.rosemoe.sora.text.ContentIO
 import io.github.rosemoe.sora.widget.EditorSearcher
 import io.github.rosemoe.sora.widget.subscribeAlways
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Main Editor Activity:
  * - Compact two-row `AppBarLayout` (`@+id/editor_appbar`):
- *   1. Material 3 `MaterialToolbar` (`@+id/editor_toolbar`) on top with `[☰]` navigation
- *      icon and `[Undo] [Redo] [Save] [Terminal] [⋮]` actions (with compact 12.5sp overflow menu).
- *   2. Dedicated Material 3 `TabLayout` (`@+id/file_tab_layout`) row directly underneath for open files.
- * - Expandable 2-Tab Bottom Sheet (`@+id/bottom_panel_container`) with a Material 3
- *   `TabLayout` (`@+id/bottom_sheet_tabs`):
- *   `0 = Code Analysis`, `1 = Search Results`.
- * - Dynamic Hierarchical File Tree drawer (`@+id/project_sidebar`) rooted in the app's internal
- *   workspace directory (`filesDir/workspace`) for full execution permissions, with live auto-refresh
- *   and modern context menus (New File, New Folder, Rename File/Folder, Delete).
+ *   1. Material 3 `MaterialToolbar` (`@+id/editor_toolbar`) displaying the active project chip (`📁 project ▾`)
+ *      and branch subtitle, plus `[Run ▶] [Search] [Save] [Terminal] [⋮]`.
+ *   2. Dedicated Material 3 `TabLayout` (`@+id/file_tab_layout`) row directly underneath for open files,
+ *      with an Empty State screen (`@+id/editor_empty_state`) when all tabs are closed.
+ * - Touch-Draggable 3-Tab Bottom Sheet (`@+id/bottom_panel_container`):
+ *   `0 = Code Analysis`, `1 = Search Results`, `2 = Build Output` (with live `■ Stop` button and `stdin` bar).
+ * - Single-row Merged Keyboard Accessory Dock (`@+id/keyboard_dock_container`) switching between
+ *   `SymbolInputView` (`SYM`) and de-duplicated Edit tools (`EDIT`), auto-hiding when the soft keyboard closes.
+ * - 3-Tab Project Sidebar Drawer (`@+id/project_sidebar`):
+ *   `0 = Files` (Explorer with indent guides), `1 = Git` (Inline Source Control), `2 = Outline` (Document Symbols).
  */
 class MainActivity : AppCompatActivity() {
 
@@ -61,21 +71,17 @@ class MainActivity : AppCompatActivity() {
     private var suppressModifiedEvent: Boolean = false
     private var suppressFileTabCallback: Boolean = false
 
-    // Dynamic Project file tree state
+    // Dynamic Project file tree & sidebar state
     private val expandedFolderKeys = HashSet<String>()
     private var treeFilterQuery: String = ""
-    private var lastTreeSignature: Long = 0L
-    private val treeWatcherHandler = Handler(Looper.getMainLooper())
-    private val treeWatcherRunnable = object : Runnable {
-        override fun run() {
-            val currentSig = ProjectManager.computeTreeSignature(this@MainActivity)
-            if (currentSig != lastTreeSignature) {
-                lastTreeSignature = currentSig
-                refreshFileTree()
-            }
-            treeWatcherHandler.postDelayed(this, 1500L)
-        }
-    }
+    private var activeSidebarTab: Int = SIDEBAR_TAB_FILES
+    private var projectFileObserver: FileObserver? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Keyboard dock state (SYM vs EDIT, and IME visibility)
+    private var isEditDockMode: Boolean = false
+    private var isImeVisible: Boolean = false
+    private var dockPinnedOpen: Boolean = false
 
     // Auto-Save debounce handler
     private val autoSaveHandler = Handler(Looper.getMainLooper())
@@ -89,12 +95,14 @@ class MainActivity : AppCompatActivity() {
     private var searchCaseSensitive = false
     private var searchRegex = false
     private var isProjectSearchMode = false
+    private var isReplaceRowExpanded = false
 
-    // 2-Tab Bottom Sheet state:
-    // 0 = Code Analysis, 1 = Search Results
+    // 3-Tab Bottom Sheet state:
+    // 0 = Code Analysis, 1 = Search Results, 2 = Build Output
     private var activeBottomTab: Int = TAB_CODE_ANALYSIS
     private var bottomPanelExpanded: Boolean = false
     private var bottomPanelTallMode: Boolean = false
+    private var bottomPanelCustomHeightPx: Int = 0
     private var suppressBottomTabCallback: Boolean = false
     private var latestDiagnostics: List<LspManager.LspDiagnostic> = emptyList()
 
@@ -157,8 +165,8 @@ class MainActivity : AppCompatActivity() {
         editorController.setup()
 
         setupAppBar()
-        setupSymbolRow()
-        setupQuickActionRow()
+        setupEmptyStateActions()
+        setupKeyboardDock()
         setupSearchBar()
         setupProjectSidebar()
         setupBottomSheetPanel()
@@ -193,6 +201,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         refreshFileTree()
+        observeActiveProjectDirectory()
 
         if (!settings.onboardingCompleted) {
             binding.editor.postDelayed({
@@ -207,6 +216,11 @@ class MainActivity : AppCompatActivity() {
                         },
                         onOpenLspManager = {
                             startActivity(Intent(this, LspActivity::class.java))
+                        },
+                        onThemeChanged = {
+                            editorController.applyEditorTheme(settings.editorTheme)
+                            editorController.applyFontSettings()
+                            applyThemeChrome()
                         }
                     )
                 }
@@ -259,10 +273,15 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.mainDrawerLayout) { _, insets ->
             val sysBars = insets.getInsets(
-                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
-                    androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+                WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout()
             )
-            val imeBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            val imeBars = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val imeOpen = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeBars.bottom > sysBars.bottom + 40
+            if (imeOpen != isImeVisible) {
+                isImeVisible = imeOpen
+                updateKeyboardDockVisibility()
+            }
             val bottomPadding = maxOf(sysBars.bottom, imeBars.bottom)
 
             binding.editorContentRoot.setPadding(
@@ -277,15 +296,14 @@ class MainActivity : AppCompatActivity() {
                 0,
                 bottomPadding
             )
-            androidx.core.view.WindowInsetsCompat.CONSUMED
+            WindowInsetsCompat.CONSUMED
         }
     }
 
-    // ---------------------------------------------------------------- Two-Row AppBarLayout
+    // ---------------------------------------------------------------- Two-Row AppBarLayout & Empty State
 
     private fun setupAppBar() {
-        binding.editorToolbar.title = ""
-        binding.editorToolbar.subtitle = null
+        updateToolbarProjectTitle()
         TooltipCompat.setTooltipText(binding.btnNewTab, "New File Tab")
 
         binding.editorToolbar.setNavigationOnClickListener {
@@ -294,6 +312,11 @@ class MainActivity : AppCompatActivity() {
             } else {
                 openProjectSidebar()
             }
+        }
+
+        // Tapping the project title/subtitle in the toolbar opens the Project Switcher bottom sheet
+        binding.editorToolbar.setOnClickListener {
+            showAppDirProjectManagerDialog()
         }
 
         binding.editorToolbar.setOnMenuItemClickListener { item ->
@@ -323,6 +346,42 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun updateToolbarProjectTitle() {
+        val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
+        val projName = activeDir.name
+        val branchInfo = if (GitHubManager.isGitRepo(activeDir)) {
+            "⎇ ${GitHubManager.getCurrentBranchFast(activeDir)}"
+        } else {
+            ProjectManager.guestPathForDir(this, activeDir)
+        }
+        binding.editorToolbar.title = "$projName ▾"
+        binding.editorToolbar.subtitle = branchInfo
+    }
+
+    private fun setupEmptyStateActions() {
+        binding.btnEmptyNewFile.setOnClickListener {
+            createNewUntitledTab()
+        }
+        binding.btnEmptyOpenTree.setOnClickListener {
+            selectSidebarTab(SIDEBAR_TAB_FILES)
+            openProjectSidebar()
+        }
+        binding.btnEmptyCloneRepo.setOnClickListener {
+            GitHubManager.showCloneRepoDialog(this) { clonedDir ->
+                switchActiveAppProject(clonedDir)
+            }
+        }
+    }
+
+    private fun updateEmptyStateVisibility() {
+        val hasTabs = openTabs.isNotEmpty()
+        binding.editor.visibility = if (hasTabs) View.VISIBLE else View.GONE
+        binding.editorEmptyState.visibility = if (hasTabs) View.GONE else View.VISIBLE
+        if (!hasTabs) {
+            binding.stickyScrollBar.visibility = View.GONE
+        }
     }
 
     private fun handleMenuItemClick(item: MenuItem): Boolean {
@@ -387,17 +446,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------------------------------------------------------- 2-Tab Bottom Sheet (Code Analysis & Search Results)
+    // ---------------------------------------------------------------- Draggable 3-Tab Bottom Sheet (Code Analysis, Search Results & Build Output)
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupBottomSheetPanel() {
         TooltipCompat.setTooltipText(binding.btnTabDiagnostics, "Code Analysis")
         TooltipCompat.setTooltipText(binding.btnTabSearchResults, "Search Results")
+        TooltipCompat.setTooltipText(binding.btnTabBuildOutput, "Build Output")
         TooltipCompat.setTooltipText(binding.btnToggleBottomPanel, "Toggle Bottom Panel")
+        TooltipCompat.setTooltipText(binding.btnBottomSheetStop, "Stop Running Process")
         TooltipCompat.setTooltipText(binding.btnBottomSheetClear, "Clear Output")
         TooltipCompat.setTooltipText(binding.btnBottomSheetExpand, "Toggle Bottom Panel Height")
         TooltipCompat.setTooltipText(binding.btnBottomSheetClose, "Collapse Bottom Panel")
 
-        TooltipCompat.setTooltipText(binding.btnTabBuildOutput, "Build Output")
         val tabTitles = listOf(
             getString(R.string.tab_code_analysis),
             getString(R.string.tab_search_results),
@@ -422,6 +483,35 @@ class MainActivity : AppCompatActivity() {
 
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+
+        // Smooth touch drag-to-resize on the bottom panel drag handle
+        val density = resources.displayMetrics.density
+        var dragStartRawY = 0f
+        var dragStartHeightPx = 0
+        binding.bottomSheetDragHandleArea.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    dragStartRawY = event.rawY
+                    dragStartHeightPx = binding.bottomPanelContainer.height
+                        .takeIf { it > 0 } ?: (200 * density).roundToInt()
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaY = (dragStartRawY - event.rawY).roundToInt()
+                    val minHeightPx = (110 * density).roundToInt()
+                    val maxHeightPx = (resources.displayMetrics.heightPixels * 0.72f).roundToInt()
+                    val newHeightPx = (dragStartHeightPx + deltaY).coerceIn(minHeightPx, maxHeightPx)
+                    bottomPanelCustomHeightPx = newHeightPx
+                    binding.bottomPanelContainer.layoutParams =
+                        binding.bottomPanelContainer.layoutParams.apply {
+                            height = newHeightPx
+                        }
+                    binding.bottomPanelContainer.requestLayout()
+                    true
+                }
+                else -> false
+            }
+        }
 
         val toggleDiagTab = View.OnClickListener {
             if (bottomPanelExpanded && activeBottomTab == TAB_CODE_ANALYSIS) {
@@ -453,22 +543,54 @@ class MainActivity : AppCompatActivity() {
             bottomPanelExpanded = !bottomPanelExpanded
             updateBottomPanelVisibility()
         }
+        binding.btnBottomSheetStop.setOnClickListener {
+            if (BuildRunManager.isRunning()) {
+                BuildRunManager.stopCurrentBuild()
+                appendBuildOutputLine("■ Process terminated by user", isStatusSummary = true, isError = true)
+                val baseTitle = getString(R.string.tab_build_output)
+                binding.bottomSheetTabs.getTabAt(TAB_BUILD_OUTPUT)?.text = "$baseTitle (Stopped)"
+                binding.btnBottomSheetStop.visibility = View.GONE
+            }
+        }
         binding.btnBottomSheetClear.setOnClickListener {
             clearActiveBottomSheetTab()
         }
         binding.btnBottomSheetExpand.setOnClickListener {
             bottomPanelTallMode = !bottomPanelTallMode
-            val density = resources.displayMetrics.density
-            val targetHeightDp = if (bottomPanelTallMode) 310 else 185
+            val targetHeightDp = if (bottomPanelTallMode) 330 else 200
+            bottomPanelCustomHeightPx = (targetHeightDp * density).roundToInt()
             binding.bottomPanelContainer.layoutParams =
                 binding.bottomPanelContainer.layoutParams.apply {
-                    height = (targetHeightDp * density).toInt()
+                    height = bottomPanelCustomHeightPx
                 }
             binding.bottomPanelContainer.requestLayout()
         }
         binding.btnBottomSheetClose.setOnClickListener {
             bottomPanelExpanded = false
             updateBottomPanelVisibility()
+        }
+
+        // Interactive stdin input bar in Build Output
+        val sendStdinAction = {
+            val rawLine = binding.buildStdinInput.text?.toString() ?: ""
+            if (BuildRunManager.sendStdinToCurrentBuild(rawLine)) {
+                appendBuildOutputLine("› $rawLine")
+                binding.buildStdinInput.text = null
+            } else {
+                Toast.makeText(this, "No active process waiting for stdin", Toast.LENGTH_SHORT).show()
+            }
+        }
+        binding.btnBuildStdinSend.setOnClickListener { sendStdinAction() }
+        binding.buildStdinInput.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_SEND ||
+                actionId == EditorInfo.IME_ACTION_DONE ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            ) {
+                sendStdinAction()
+                true
+            } else {
+                false
+            }
         }
 
         binding.lspStatusBadge.setOnClickListener {
@@ -494,13 +616,16 @@ class MainActivity : AppCompatActivity() {
         when (activeBottomTab) {
             TAB_SEARCH_RESULTS -> {
                 binding.projectSearchResultsContainer.removeAllViews()
+                binding.bottomSheetTabs.getTabAt(TAB_SEARCH_RESULTS)?.text = getString(R.string.tab_search_results)
             }
             TAB_CODE_ANALYSIS -> {
                 runLspAnalysisForCurrentFile()
             }
             TAB_BUILD_OUTPUT -> {
                 BuildRunManager.stopCurrentBuild()
+                binding.btnBottomSheetStop.visibility = View.GONE
                 binding.buildOutputContainer.removeAllViews()
+                binding.bottomSheetTabs.getTabAt(TAB_BUILD_OUTPUT)?.text = getString(R.string.tab_build_output)
             }
         }
     }
@@ -515,11 +640,9 @@ class MainActivity : AppCompatActivity() {
                 ModernUiHelper.MenuOption(
                     id = 0,
                     title = "Install LSP & Language Package",
-                    subtitle = "Runs `lsp-install ${spec.id}` and `apt install -y ${spec.alpinePackages.joinToString(" ")}`",
+                    subtitle = "Runs `lsp-install ${spec.id}` in Ubuntu 24.04 terminal",
                     iconRes = R.drawable.ic_terminal,
                     action = {
-                        LspManager.installServer(this, spec.id)
-                        runLspAnalysisForCurrentFile()
                         openTerminalInDirectory(
                             targetDir = ProjectManager.ensureDefaultLocalWorkspace(this),
                             autorunCommand = "lsp-install ${spec.id}"
@@ -559,11 +682,12 @@ class MainActivity : AppCompatActivity() {
 
         binding.lspDiagnosticsScroll.visibility = if (activeBottomTab == TAB_CODE_ANALYSIS) View.VISIBLE else View.GONE
         binding.projectSearchResultsScroll.visibility = if (activeBottomTab == TAB_SEARCH_RESULTS) View.VISIBLE else View.GONE
-        binding.buildOutputScroll.visibility = if (activeBottomTab == TAB_BUILD_OUTPUT) View.VISIBLE else View.GONE
+        binding.buildOutputPanel.visibility = if (activeBottomTab == TAB_BUILD_OUTPUT) View.VISIBLE else View.GONE
 
         val fgColor = editorController.currentForegroundColor()
         val subtleColor = editorController.currentSubtleColor()
-        val accentColor = Color.parseColor("#FFB74D")
+        val isDark = editorController.isCurrentThemeDark()
+        val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
 
         binding.btnTabDiagnostics.imageTintList = ColorStateList.valueOf(
             if (bottomPanelExpanded && activeBottomTab == TAB_CODE_ANALYSIS) accentColor else subtleColor
@@ -589,12 +713,15 @@ class MainActivity : AppCompatActivity() {
         val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
         val iconTint = ColorStateList.valueOf(fgColor)
         val subtleTint = ColorStateList.valueOf(subtleColor)
+        val density = resources.displayMetrics.density
 
         binding.editorContentRoot.setBackgroundColor(chromeBg)
 
         // Two-Row AppBarLayout
         binding.editorAppbar.setBackgroundColor(chromeBg)
         binding.editorToolbar.setBackgroundColor(chromeBg)
+        binding.editorToolbar.setTitleTextColor(fgColor)
+        binding.editorToolbar.setSubtitleTextColor(subtleColor)
         binding.editorToolbar.navigationIcon?.setTint(fgColor)
         binding.editorToolbar.overflowIcon?.setTint(fgColor)
         val menu = binding.editorToolbar.menu
@@ -608,6 +735,12 @@ class MainActivity : AppCompatActivity() {
         binding.fileTabLayout.setTabTextColors(subtleColor, fgColor)
         binding.btnNewTab.imageTintList = iconTint
 
+        // Empty State
+        binding.editorEmptyState.setBackgroundColor(surfaceBg)
+        binding.emptyStateIcon.imageTintList = ColorStateList.valueOf(accentColor)
+        binding.emptyStateTitle.setTextColor(fgColor)
+        binding.emptyStateSubtitle.setTextColor(subtleColor)
+
         // Find & Replace Bar
         binding.findBar.setBackgroundColor(chromeBg)
         binding.searchInput.setTextColor(fgColor)
@@ -615,18 +748,20 @@ class MainActivity : AppCompatActivity() {
         binding.replaceInput.setTextColor(fgColor)
         binding.replaceInput.setHintTextColor(subtleColor)
         binding.searchStatus.setTextColor(subtleColor)
+        binding.btnToggleReplaceRow.imageTintList = iconTint
         binding.btnSearchClose.imageTintList = iconTint
-        binding.btnSearchCase.imageTintList = iconTint
-        binding.btnSearchRegex.imageTintList = iconTint
         binding.btnSearchPrev.imageTintList = iconTint
         binding.btnSearchNext.imageTintList = iconTint
-        binding.btnSearchProjectMode.imageTintList = iconTint
+        updateSearchFilterButtonPills()
 
-        // File Tree Navigation Drawer
+        // File Tree & Multi-Mode Navigation Drawer
         binding.projectSidebar.setBackgroundColor(chromeBg)
         binding.sidebarHeader.setBackgroundColor(chromeBg)
         binding.projectTitleText.setTextColor(fgColor)
         binding.projectModeSubtitle.setTextColor(subtleColor)
+        binding.sidebarModeTabs.setBackgroundColor(chromeBg)
+        binding.sidebarModeTabs.setSelectedTabIndicatorColor(accentColor)
+        binding.sidebarModeTabs.setTabTextColors(subtleColor, fgColor)
         binding.treeFilterInput.setTextColor(fgColor)
         binding.treeFilterInput.setHintTextColor(subtleColor)
         binding.btnSelectProjectFolder.imageTintList = iconTint
@@ -634,17 +769,28 @@ class MainActivity : AppCompatActivity() {
         binding.btnTreeNewFile.imageTintList = iconTint
         binding.btnTreeRefresh.imageTintList = iconTint
 
-        // 2-Tab Bottom Sheet
+        // 3-Tab Draggable Bottom Sheet
         binding.bottomPanelContainer.setBackgroundColor(surfaceBg)
+        binding.bottomSheetDragHandleArea.setBackgroundColor(chromeBg)
+        binding.bottomSheetDragPill.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 3f * density
+            setColor(ModernUiHelper.withAlpha(subtleColor, 0x80))
+        }
         binding.bottomSheetHeader.setBackgroundColor(chromeBg)
         binding.bottomSheetTabs.setBackgroundColor(chromeBg)
         binding.bottomSheetTabs.setSelectedTabIndicatorColor(accentColor)
         binding.bottomSheetTabs.setTabTextColors(subtleColor, fgColor)
+        binding.btnBottomSheetStop.imageTintList = ColorStateList.valueOf(Color.parseColor("#FF5252"))
         binding.btnBottomSheetClear.imageTintList = subtleTint
         binding.btnBottomSheetExpand.imageTintList = subtleTint
         binding.btnBottomSheetClose.imageTintList = iconTint
+        binding.buildStdinRow.setBackgroundColor(chromeBg)
+        binding.buildStdinInput.setTextColor(fgColor)
+        binding.buildStdinInput.setHintTextColor(subtleColor)
+        binding.btnBuildStdinSend.imageTintList = ColorStateList.valueOf(accentColor)
 
-        // Sticky-Scroll Bar, Editor, Status Bar & Symbol Input Bar
+        // Sticky-Scroll Bar, Editor, Status Bar & Merged Keyboard Accessory Dock
         binding.stickyScrollBar.setBackgroundColor(chromeBg)
         binding.stickyScrollText.setTextColor(fgColor)
         binding.stickyScrollLineBadge.setTextColor(accentColor)
@@ -654,13 +800,16 @@ class MainActivity : AppCompatActivity() {
         binding.encodingStatusText.setTextColor(subtleColor)
         binding.languageStatusText.setTextColor(subtleColor)
 
+        binding.keyboardDockContainer.setBackgroundColor(symbolBg)
         binding.symbolInput.setBackgroundColor(symbolBg)
         binding.symbolInput.setTextColor(fgColor)
-        binding.quickActionBar.setBackgroundColor(chromeBg)
+        binding.quickActionBar.setBackgroundColor(symbolBg)
+        styleDockModeButton()
 
         renderTabs()
         setupQuickActionRow()
         updateBottomPanelVisibility()
+        updateToolbarProjectTitle()
 
         window?.let { win ->
             win.statusBarColor = chromeBg
@@ -679,19 +828,22 @@ class MainActivity : AppCompatActivity() {
         editorController.editor.setWordwrap(settings.wordWrap)
         applyThemeChrome()
         refreshFileTree()
+        observeActiveProjectDirectory()
         runLspAnalysisForCurrentFile()
         updateStatusLine()
-        treeWatcherHandler.removeCallbacks(treeWatcherRunnable)
-        treeWatcherHandler.postDelayed(treeWatcherRunnable, 1500L)
     }
 
     override fun onPause() {
-        treeWatcherHandler.removeCallbacks(treeWatcherRunnable)
         autoSaveHandler.removeCallbacks(autoSaveRunnable)
         if (settings.autoSaveEnabled) {
             performAutoSaveModifiedTabs()
         }
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        stopObservingProjectDirectory()
+        super.onDestroy()
     }
 
     private fun openTerminalInDirectory(
@@ -713,9 +865,9 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ---------------------------------------------------------------- Symbol & Quick Action Bars
+    // ---------------------------------------------------------------- Merged Single-Row Keyboard Accessory Dock
 
-    private fun setupSymbolRow() {
+    private fun setupKeyboardDock() {
         val displays = arrayOf(
             "TAB", "{", "}", "(", ")", "[", "]", ";", "=", "\"", "'", "<", ">", "/",
             "|", "\\", ":", "+", "-", "*", "%", "!", "#", "&", "$", "@", "~", "^", ",", "."
@@ -728,6 +880,56 @@ class MainActivity : AppCompatActivity() {
         symbols.addSymbols(displays, inserts)
         symbols.bindEditor(binding.editor)
         symbols.setTextColor(editorController.currentForegroundColor())
+
+        TooltipCompat.setTooltipText(
+            binding.btnToggleDockMode,
+            "Tap: Switch Symbols / Edit Tools • Long-press: Pin bar when keyboard is closed"
+        )
+        binding.btnToggleDockMode.setOnClickListener { v ->
+            OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
+            isEditDockMode = !isEditDockMode
+            updateKeyboardDockModeUi()
+        }
+        binding.btnToggleDockMode.setOnLongClickListener { v ->
+            OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
+            dockPinnedOpen = !dockPinnedOpen
+            updateKeyboardDockVisibility()
+            Toast.makeText(
+                this,
+                if (dockPinnedOpen) "Keyboard dock pinned visible" else "Keyboard dock auto-hides when keyboard closes",
+                Toast.LENGTH_SHORT
+            ).show()
+            true
+        }
+
+        setupQuickActionRow()
+        updateKeyboardDockModeUi()
+        updateKeyboardDockVisibility()
+    }
+
+    private fun updateKeyboardDockModeUi() {
+        binding.symbolInput.visibility = if (isEditDockMode) View.GONE else View.VISIBLE
+        binding.quickActionBar.visibility = if (isEditDockMode) View.VISIBLE else View.GONE
+        binding.btnToggleDockMode.text = if (isEditDockMode) "EDIT ⇄" else "SYM ⇄"
+        styleDockModeButton()
+    }
+
+    private fun styleDockModeButton() {
+        val isDark = editorController.isCurrentThemeDark()
+        val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val density = resources.displayMetrics.density
+        binding.btnToggleDockMode.setTextColor(accentColor)
+        binding.btnToggleDockMode.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 8f * density
+            setColor(ModernUiHelper.withAlpha(accentColor, 0x20))
+            setStroke((1 * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accentColor, 0x66))
+        }
+    }
+
+    private fun updateKeyboardDockVisibility() {
+        val shouldShow = isImeVisible || dockPinnedOpen
+        binding.keyboardDockContainer.visibility = if (shouldShow) View.VISIBLE else View.GONE
     }
 
     private fun setupQuickActionRow() {
@@ -744,28 +946,26 @@ class MainActivity : AppCompatActivity() {
             val action: () -> Unit
         )
 
+        // Focused exclusively on code manipulation & intelligence (no redundant Run/Save/Git buttons from top bar)
         val tools = listOf(
-            QuickToolIcon(R.drawable.ic_play, "Compile & Run (Long-press: Run Config)") { compileAndRunCurrentFile() },
-            QuickToolIcon(R.drawable.ic_save, "Save") { saveDocument() },
-            QuickToolIcon(R.drawable.ic_lsp, "LSP: Hover / Go to Definition / References / Rename") { showLspCodeActionsDialog() },
-            QuickToolIcon(R.drawable.ic_expand, "Toggle Code Folding at Cursor") {
-                val msg = editorController.toggleFoldBlockAtCursor()
-                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            QuickToolIcon(R.drawable.ic_lsp, "LSP: Hover / Definition / References / Rename") { showLspCodeActionsDialog() },
+            QuickToolIcon(R.drawable.ic_format_align, "Format Document") { formatCurrentDocument() },
+            QuickToolIcon(R.drawable.ic_comment, "Toggle Line Comment") {
+                editorController.toggleLineComment(currentFile?.displayName ?: "")
             },
-            QuickToolIcon(R.drawable.ic_replace, "Format Document") { formatCurrentDocument() },
-            QuickToolIcon(R.drawable.ic_folder, "Git & GitHub Integration") { showGitHubIntegrationDialog() },
-            QuickToolIcon(R.drawable.ic_undo, "Undo") { binding.editor.undo() },
-            QuickToolIcon(R.drawable.ic_redo, "Redo") { binding.editor.redo() },
+            QuickToolIcon(R.drawable.ic_indent, "Indent (Tab)") { editorController.indentLineOrSelection() },
+            QuickToolIcon(R.drawable.ic_outdent, "Outdent (Shift+Tab)") { editorController.outdentLineOrSelection() },
             QuickToolIcon(R.drawable.ic_move_up, "Move Line Up") { editorController.moveLineUp() },
             QuickToolIcon(R.drawable.ic_move_down, "Move Line Down") { editorController.moveLineDown() },
             QuickToolIcon(R.drawable.ic_copy_up, "Duplicate Line Up") { editorController.copyLineUp() },
             QuickToolIcon(R.drawable.ic_copy_down, "Duplicate Line Down") { editorController.copyLineDown() },
-            QuickToolIcon(R.drawable.ic_indent, "Indent (Tab)") { editorController.indentLineOrSelection() },
-            QuickToolIcon(R.drawable.ic_outdent, "Outdent (Shift+Tab)") { editorController.outdentLineOrSelection() },
-            QuickToolIcon(R.drawable.ic_comment, "Toggle Comment") {
-                editorController.toggleLineComment(currentFile?.displayName ?: "")
+            QuickToolIcon(R.drawable.ic_expand, "Toggle Code Folding at Cursor") {
+                val msg = editorController.toggleFoldBlockAtCursor()
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
             },
-            QuickToolIcon(R.drawable.ic_delete, "Delete Line") { editorController.deleteCurrentLine() }
+            QuickToolIcon(R.drawable.ic_delete, "Delete Current Line") { editorController.deleteCurrentLine() },
+            QuickToolIcon(R.drawable.ic_undo, "Undo") { binding.editor.undo() },
+            QuickToolIcon(R.drawable.ic_redo, "Redo") { binding.editor.redo() }
         )
 
         for (tool in tools) {
@@ -775,27 +975,20 @@ class MainActivity : AppCompatActivity() {
                 contentDescription = tool.tooltip
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
                 setPadding(
-                    (7 * density).toInt(),
-                    (7 * density).toInt(),
-                    (7 * density).toInt(),
-                    (7 * density).toInt()
+                    (8 * density).toInt(),
+                    (8 * density).toInt(),
+                    (8 * density).toInt(),
+                    (8 * density).toInt()
                 )
                 layoutParams = LinearLayout.LayoutParams(
-                    (36 * density).toInt(),
-                    (32 * density).toInt()
+                    (38 * density).toInt(),
+                    (36 * density).toInt()
                 ).apply {
                     marginEnd = (4 * density).toInt()
                 }
                 setOnClickListener { v ->
                     OnboardingAndHapticsHelper.performExtraKeyHaptic(this@MainActivity, v)
                     tool.action()
-                }
-                if (tool.iconRes == R.drawable.ic_play) {
-                    setOnLongClickListener { v ->
-                        OnboardingAndHapticsHelper.performExtraKeyHaptic(this@MainActivity, v)
-                        showRunConfigForCurrentFile()
-                        true
-                    }
                 }
             }
             TooltipCompat.setTooltipText(btn, tool.tooltip)
@@ -901,7 +1094,7 @@ class MainActivity : AppCompatActivity() {
 
         if (diags.isEmpty()) {
             val emptyView = MaterialTextView(this).apply {
-                text = "No problems detected in ${currentFile?.displayName ?: "file"}."
+                text = "✓ No problems detected in ${currentFile?.displayName ?: "file"}."
                 textSize = 12f
                 setTextColor(subtleColor)
                 setPadding((8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt())
@@ -914,6 +1107,7 @@ class MainActivity : AppCompatActivity() {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = (36 * density).toInt()
                 setPadding(
                     (6 * density).toInt(),
                     (5 * density).toInt(),
@@ -963,13 +1157,13 @@ class MainActivity : AppCompatActivity() {
                     setTextColor(Color.parseColor("#66BB6A"))
                     setPadding(
                         (8 * density).toInt(),
-                        (2 * density).toInt(),
+                        (3 * density).toInt(),
                         (8 * density).toInt(),
-                        (2 * density).toInt()
+                        (3 * density).toInt()
                     )
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 5 * density
+                        cornerRadius = 6 * density
                         setColor(surfaceBg)
                         setStroke((1 * density).toInt().coerceAtLeast(1), Color.parseColor("#66BB6A"))
                     }
@@ -997,7 +1191,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchToTab(index: Int) {
-        if (index !in openTabs.indices) return
+        if (index !in openTabs.indices) {
+            updateEmptyStateVisibility()
+            return
+        }
         if (activeTabIndex in openTabs.indices && activeTabIndex != index) {
             saveCurrentTabBufferState()
             if (settings.autoSaveEnabled) {
@@ -1008,6 +1205,7 @@ class MainActivity : AppCompatActivity() {
         }
         activeTabIndex = index
         val target = openTabs[index]
+        updateEmptyStateVisibility()
 
         suppressModifiedEvent = true
         try {
@@ -1027,6 +1225,9 @@ class MainActivity : AppCompatActivity() {
         runLspAnalysisForCurrentFile()
         updateStatusLine()
         updateStickyScrollHeader()
+        if (activeSidebarTab == SIDEBAR_TAB_OUTLINE && binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+            renderSidebarOutlinePage()
+        }
         ContinueCodingWidgetProvider.recordActiveSessionAndRefresh(
             context = this,
             projectDir = ProjectManager.ensureDefaultLocalWorkspace(this),
@@ -1043,6 +1244,8 @@ class MainActivity : AppCompatActivity() {
             val density = resources.displayMetrics.density
             val fgColor = editorController.currentForegroundColor()
             val subtleColor = editorController.currentSubtleColor()
+            val isDark = editorController.isCurrentThemeDark()
+            val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
 
             openTabs.forEachIndexed { idx, fileTab ->
                 val isActive = idx == activeTabIndex
@@ -1052,9 +1255,9 @@ class MainActivity : AppCompatActivity() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(
+                        (6 * density).toInt(),
                         (4 * density).toInt(),
                         (4 * density).toInt(),
-                        (2 * density).toInt(),
                         (4 * density).toInt()
                     )
                     setOnClickListener {
@@ -1082,8 +1285,7 @@ class MainActivity : AppCompatActivity() {
                 customTabView.addView(iconView)
 
                 val titleView = MaterialTextView(this).apply {
-                    val dirtyDot = if (fileTab.modified) " ●" else ""
-                    text = "${fileTab.displayName}$dirtyDot"
+                    text = fileTab.displayName
                     textSize = 12.5f
                     setSingleLine(true)
                     setTextColor(if (isActive) fgColor else subtleColor)
@@ -1091,22 +1293,33 @@ class MainActivity : AppCompatActivity() {
                 }
                 customTabView.addView(titleView)
 
+                if (fileTab.modified) {
+                    val modifiedDot = MaterialTextView(this).apply {
+                        text = " ●"
+                        textSize = 11f
+                        setTextColor(accentColor)
+                        setTypeface(typeface, Typeface.BOLD)
+                    }
+                    customTabView.addView(modifiedDot)
+                }
+
+                // Enlarged 28dp close button for reliable thumb tap accuracy
                 val closeBtn = ImageButton(this, null, 0, R.style.PocketDev_IconButton).apply {
                     setImageResource(R.drawable.ic_close)
                     imageTintList = ColorStateList.valueOf(if (isActive) fgColor else subtleColor)
                     scaleType = ImageView.ScaleType.CENTER_INSIDE
                     contentDescription = "Close ${fileTab.displayName}"
                     setPadding(
-                        (3 * density).toInt(),
-                        (3 * density).toInt(),
-                        (3 * density).toInt(),
-                        (3 * density).toInt()
+                        (6 * density).toInt(),
+                        (6 * density).toInt(),
+                        (6 * density).toInt(),
+                        (6 * density).toInt()
                     )
                     layoutParams = LinearLayout.LayoutParams(
-                        (20 * density).toInt(),
-                        (20 * density).toInt()
+                        (28 * density).toInt(),
+                        (28 * density).toInt()
                     ).apply {
-                        marginStart = (5 * density).toInt()
+                        marginStart = (4 * density).toInt()
                     }
                     setOnClickListener { closeTabAt(idx) }
                 }
@@ -1183,9 +1396,11 @@ class MainActivity : AppCompatActivity() {
                 iconRes = R.drawable.ic_delete,
                 isDestructive = true,
                 action = {
+                    saveCurrentTabBufferState()
                     openTabs.clear()
                     activeTabIndex = -1
-                    createNewUntitledTab()
+                    renderTabs()
+                    updateEmptyStateVisibility()
                 }
             )
         )
@@ -1194,7 +1409,7 @@ class MainActivity : AppCompatActivity() {
             context = this,
             title = tab.displayName,
             subtitle = tab.localFile?.parentFile?.name ?: "Open Editor Tab",
-            headerIconRes = R.drawable.ic_folder,
+            headerIconRes = R.drawable.ic_new_file,
             options = options
         )
     }
@@ -1204,7 +1419,9 @@ class MainActivity : AppCompatActivity() {
         saveCurrentTabBufferState()
         openTabs.removeAt(index)
         if (openTabs.isEmpty()) {
-            createNewUntitledTab()
+            activeTabIndex = -1
+            renderTabs()
+            updateEmptyStateVisibility()
             return
         }
         val nextIndex = when {
@@ -1217,7 +1434,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun createNewUntitledTab() {
-        saveCurrentTabBufferState()
+        if (openTabs.isNotEmpty()) {
+            saveCurrentTabBufferState()
+        }
         val untitledCount = openTabs.count { it.displayName.startsWith("untitled") } + 1
         val name = if (untitledCount == 1) "untitled.kt" else "untitled_$untitledCount.kt"
         val workspaceRoot = ProjectManager.ensureDefaultLocalWorkspace(this)
@@ -1286,30 +1505,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------------------------------------------------------- Dynamic App-Internal File Tree Navigation Drawer
+    // ---------------------------------------------------------------- 3-Tab Project Sidebar Drawer (Files, Git, Outline)
 
     private fun setupProjectSidebar() {
-        TooltipCompat.setTooltipText(binding.btnSelectProjectFolder, "Load / Manage Projects in App Dir")
-        TooltipCompat.setTooltipText(binding.btnLocalWorkspace, "Switch to Default App Workspace")
+        TooltipCompat.setTooltipText(binding.btnSelectProjectFolder, "Switch or Import Project")
         TooltipCompat.setTooltipText(binding.btnTreeNewFile, "New File or Folder")
-        TooltipCompat.setTooltipText(binding.btnTreeRefresh, "Refresh File Tree")
+        TooltipCompat.setTooltipText(binding.btnTreeRefresh, "Refresh Active Panel")
+
+        // Initialize 3 Sidebar Mode Tabs: [Files] [Git] [Outline]
+        val sidebarTabLabels = listOf("Files", "Git", "Outline")
+        binding.sidebarModeTabs.removeAllTabs()
+        for (lbl in sidebarTabLabels) {
+            binding.sidebarModeTabs.addTab(binding.sidebarModeTabs.newTab().setText(lbl))
+        }
+        binding.sidebarModeTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                val pos = tab?.position ?: return
+                selectSidebarTab(pos)
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
 
         binding.mainDrawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
-                refreshFileTree()
+                refreshActiveSidebarPage()
             }
         })
 
+        // Clicking either the project selector header or folder button opens the Project Switcher
+        binding.sidebarProjectSelector.setOnClickListener {
+            showAppDirProjectManagerDialog()
+        }
         binding.btnSelectProjectFolder.setOnClickListener {
             showAppDirProjectManagerDialog()
         }
         binding.btnLocalWorkspace.setOnClickListener {
             val defaultDir = ProjectManager.switchToLocalWorkspace(this)
             switchActiveAppProject(defaultDir)
-            Toast.makeText(this, "Switched to App Dir project: ${defaultDir.name}", Toast.LENGTH_SHORT).show()
         }
         binding.btnTreeRefresh.setOnClickListener {
-            refreshFileTree()
+            refreshActiveSidebarPage()
         }
         binding.btnTreeNewFile.setOnClickListener {
             val activeName = ProjectManager.activeProjectName(this)
@@ -1323,7 +1559,7 @@ class MainActivity : AppCompatActivity() {
                         id = 0,
                         title = "New File",
                         subtitle = "Create a new source or config file",
-                        iconRes = R.drawable.ic_add,
+                        iconRes = R.drawable.ic_new_file,
                         action = { promptCreateInProject(parentNode = null, isDirectory = false) }
                     ),
                     ModernUiHelper.MenuOption(
@@ -1337,7 +1573,7 @@ class MainActivity : AppCompatActivity() {
                         id = 2,
                         title = "New Project in Ubuntu Dir",
                         subtitle = "Create a new project inside /root/projects/<name>",
-                        iconRes = R.drawable.ic_folder,
+                        iconRes = R.drawable.ic_folder_open,
                         action = { promptCreateNewAppDirProject() }
                     ),
                     ModernUiHelper.MenuOption(
@@ -1363,10 +1599,502 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun selectSidebarTab(tabIdx: Int) {
+        activeSidebarTab = tabIdx.coerceIn(0, 2)
+        binding.sidebarModeTabs.getTabAt(activeSidebarTab)?.let { tab ->
+            if (!tab.isSelected) tab.select()
+        }
+        binding.sidebarFilesPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_FILES) View.VISIBLE else View.GONE
+        binding.sidebarGitPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_GIT) View.VISIBLE else View.GONE
+        binding.sidebarOutlinePage.visibility = if (activeSidebarTab == SIDEBAR_TAB_OUTLINE) View.VISIBLE else View.GONE
+        refreshActiveSidebarPage()
+    }
+
+    private fun refreshActiveSidebarPage() {
+        when (activeSidebarTab) {
+            SIDEBAR_TAB_FILES -> refreshFileTree()
+            SIDEBAR_TAB_GIT -> renderSidebarGitPage()
+            SIDEBAR_TAB_OUTLINE -> renderSidebarOutlinePage()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun observeActiveProjectDirectory() {
+        stopObservingProjectDirectory()
+        val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
+        runCatching {
+            val mask = FileObserver.CREATE or FileObserver.DELETE or FileObserver.MOVED_FROM or FileObserver.MOVED_TO
+            projectFileObserver = object : FileObserver(activeDir.absolutePath, mask) {
+                override fun onEvent(event: Int, path: String?) {
+                    if (path != null && !path.startsWith(".git")) {
+                        mainHandler.post {
+                            if (binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START) && activeSidebarTab == SIDEBAR_TAB_FILES) {
+                                refreshFileTree()
+                            }
+                        }
+                    }
+                }
+            }.also { it.startWatching() }
+        }
+    }
+
+    private fun stopObservingProjectDirectory() {
+        runCatching { projectFileObserver?.stopWatching() }
+        projectFileObserver = null
+    }
+
     /**
-     * Shows a modern Material 3 App-Internal Project Manager dialog.
-     * Projects are loaded strictly from the app's internal workspace directory (`$filesDir/workspace`)
-     * because external storage lacks POSIX execution permissions (`noexec`).
+     * Renders Tab 1 of the Project Sidebar: Inline Source Control (Git) panel with branch switcher,
+     * commit message input, Commit/Push/Pull/Diff actions, and interactive modified files list.
+     */
+    private fun renderSidebarGitPage() {
+        val container = binding.sidebarGitContainer
+        container.removeAllViews()
+
+        val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
+        val palette = ModernUiHelper.resolvePalette(this)
+        val density = resources.displayMetrics.density
+        fun dp(v: Int): Int = (v * density).roundToInt()
+
+        val hasRepo = GitHubManager.isGitRepo(activeDir)
+        val branch = if (hasRepo) GitHubManager.getCurrentBranchFast(activeDir) else "uninitialized"
+
+        // Top Branch & Account Status Card
+        val branchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(10).toFloat()
+                setColor(palette.surfaceBg)
+                setStroke(dp(1), palette.borderColor)
+            }
+        }
+
+        val branchText = MaterialTextView(this).apply {
+            text = if (hasRepo) "⎇ $branch ▾" else "Not a Git Repo"
+            textSize = 12.5f
+            typeface = Typeface.MONOSPACE
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(palette.accentColor)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            setOnClickListener {
+                if (hasRepo) {
+                    GitHubManager.showBranchSwitcherDialog(this@MainActivity, activeDir) {
+                        updateToolbarProjectTitle()
+                        renderSidebarGitPage()
+                    }
+                }
+            }
+        }
+        branchRow.addView(branchText)
+
+        val accountChip = MaterialTextView(this).apply {
+            text = if (settings.githubToken.isNotBlank()) "@${settings.githubUsername.ifBlank { "Auth" }}" else "Sign In"
+            textSize = 11f
+            setTextColor(palette.fgColor)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(6).toFloat()
+                setColor(ModernUiHelper.withAlpha(palette.accentColor, 0x22))
+            }
+            setOnClickListener {
+                GitHubManager.showAuthDialog(this@MainActivity) {
+                    renderSidebarGitPage()
+                }
+            }
+        }
+        branchRow.addView(accountChip)
+        container.addView(branchRow)
+
+        if (!hasRepo) {
+            val emptyInfo = MaterialTextView(this).apply {
+                text = "Initialize a Git repository in '${activeDir.name}' or clone from GitHub to track changes, view diffs, and push commits."
+                textSize = 12f
+                setTextColor(palette.subtleColor)
+                setPadding(0, dp(12), 0, dp(12))
+            }
+            container.addView(emptyInfo)
+
+            val initBtn = MaterialButton(this).apply {
+                text = "Initialize Git Repository (git init)"
+                textSize = 12f
+                isAllCaps = false
+                backgroundTintList = ColorStateList.valueOf(palette.accentColor)
+                setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+                setOnClickListener {
+                    Thread {
+                        GitHubManager.runGitCommand(
+                            this@MainActivity,
+                            activeDir,
+                            "init -b main && git config user.name 'PocketDev' && git config user.email 'dev@pocketdev.local'"
+                        )
+                        GitHubManager.invalidateStatusCache()
+                        runOnUiThread {
+                            updateToolbarProjectTitle()
+                            renderSidebarGitPage()
+                        }
+                    }.start()
+                }
+            }
+            container.addView(initBtn)
+
+            val cloneBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "Clone GitHub Repository…"
+                textSize = 12f
+                isAllCaps = false
+                setTextColor(palette.fgColor)
+                setOnClickListener {
+                    GitHubManager.showCloneRepoDialog(this@MainActivity) { clonedDir ->
+                        switchActiveAppProject(clonedDir)
+                    }
+                }
+            }
+            container.addView(cloneBtn)
+            return
+        }
+
+        // Commit Input + Quick Commit / Push / Pull / Diff controls
+        val commitInput = EditText(this).apply {
+            hint = "Commit message (e.g. feat: update UI)…"
+            textSize = 12.5f
+            setTextColor(palette.fgColor)
+            setHintTextColor(palette.subtleColor)
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(8).toFloat()
+                setColor(palette.surfaceBg)
+                setStroke(dp(1), palette.borderColor)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(10)
+            }
+        }
+        container.addView(commitInput)
+
+        val actionRow1 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        }
+
+        val commitBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Commit"
+            textSize = 11.5f
+            isAllCaps = false
+            setTextColor(palette.fgColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(36), 1f).apply { marginEnd = dp(4) }
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener {
+                val msg = commitInput.text?.toString()?.trim().orEmpty()
+                if (msg.isEmpty()) {
+                    GitHubManager.showCommitAndPushDialog(this@MainActivity, activeDir) {
+                        renderSidebarGitPage()
+                    }
+                    return@setOnClickListener
+                }
+                Thread {
+                    val res = GitHubManager.runGitCommand(
+                        this@MainActivity,
+                        activeDir,
+                        "add -A && git commit -m '${msg.replace("'", "'\\''")}'"
+                    )
+                    GitHubManager.invalidateStatusCache()
+                    runOnUiThread {
+                        commitInput.text = null
+                        Toast.makeText(this@MainActivity, res.combinedOutput.ifBlank { "Committed ✓" }, Toast.LENGTH_SHORT).show()
+                        renderSidebarGitPage()
+                    }
+                }.start()
+            }
+        }
+        actionRow1.addView(commitBtn)
+
+        val pushBtn = MaterialButton(this).apply {
+            text = "Commit & Push"
+            textSize = 11.5f
+            isAllCaps = false
+            backgroundTintList = ColorStateList.valueOf(palette.accentColor)
+            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(0, dp(36), 1.2f)
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener {
+                val msg = commitInput.text?.toString()?.trim().orEmpty()
+                if (msg.isEmpty()) {
+                    GitHubManager.showCommitAndPushDialog(this@MainActivity, activeDir) {
+                        renderSidebarGitPage()
+                    }
+                } else {
+                    Thread {
+                        val res = GitHubManager.runGitCommand(
+                            this@MainActivity,
+                            activeDir,
+                            "add -A && (git commit -m '${msg.replace("'", "'\\''")}' || true) && git push -u origin $branch"
+                        )
+                        GitHubManager.invalidateStatusCache()
+                        runOnUiThread {
+                            commitInput.text = null
+                            Toast.makeText(
+                                this@MainActivity,
+                                if (res.isSuccess) "Pushed to origin/$branch ✓" else res.combinedOutput,
+                                Toast.LENGTH_LONG
+                            ).show()
+                            renderSidebarGitPage()
+                        }
+                    }.start()
+                }
+            }
+        }
+        actionRow1.addView(pushBtn)
+        container.addView(actionRow1)
+
+        val actionRow2 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(6) }
+        }
+
+        val pullBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Pull"
+            textSize = 11f
+            isAllCaps = false
+            setTextColor(palette.fgColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(34), 1f).apply { marginEnd = dp(4) }
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener {
+                Toast.makeText(this@MainActivity, "Running git pull --rebase...", Toast.LENGTH_SHORT).show()
+                Thread {
+                    val res = GitHubManager.runGitCommand(this@MainActivity, activeDir, "pull --rebase")
+                    GitHubManager.invalidateStatusCache()
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, res.combinedOutput.ifBlank { "Up to date ✓" }, Toast.LENGTH_SHORT).show()
+                        renderSidebarGitPage()
+                    }
+                }.start()
+            }
+        }
+        actionRow2.addView(pullBtn)
+
+        val diffBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Full Diff"
+            textSize = 11f
+            isAllCaps = false
+            setTextColor(palette.fgColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(34), 1f).apply { marginEnd = dp(4) }
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener {
+                GitHubManager.showDiffViewerDialog(this@MainActivity, activeDir, null)
+            }
+        }
+        actionRow2.addView(diffBtn)
+
+        val cloneMoreBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Clone"
+            textSize = 11f
+            isAllCaps = false
+            setTextColor(palette.fgColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(34), 1f)
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener {
+                GitHubManager.showCloneRepoDialog(this@MainActivity) { clonedDir ->
+                    switchActiveAppProject(clonedDir)
+                }
+            }
+        }
+        actionRow2.addView(cloneMoreBtn)
+        container.addView(actionRow2)
+
+        // Changed files list header
+        val changesHeader = MaterialTextView(this).apply {
+            text = "WORKING TREE CHANGES"
+            textSize = 10.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(palette.accentColor)
+            setPadding(0, dp(14), 0, dp(6))
+        }
+        container.addView(changesHeader)
+
+        val filesListLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        container.addView(filesListLayout)
+
+        Thread {
+            val statusMap = GitHubManager.computeGitStatusSync(this, activeDir)
+            runOnUiThread {
+                filesListLayout.removeAllViews()
+                if (statusMap.isEmpty()) {
+                    val cleanTv = MaterialTextView(this).apply {
+                        text = "✓ Working tree clean — no uncommitted changes."
+                        textSize = 12f
+                        setTextColor(palette.subtleColor)
+                        setPadding(0, dp(4), 0, dp(4))
+                    }
+                    filesListLayout.addView(cleanTv)
+                } else {
+                    for ((relPath, state) in statusMap.entries.sortedBy { it.key }) {
+                        val row = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            minimumHeight = dp(38)
+                            setPadding(dp(6), dp(6), dp(6), dp(6))
+                            setOnClickListener {
+                                val target = File(activeDir, relPath)
+                                GitHubManager.showDiffViewerDialog(this@MainActivity, activeDir, target)
+                            }
+                        }
+                        val badge = MaterialTextView(this).apply {
+                            text = state.badge
+                            textSize = 11f
+                            typeface = Typeface.MONOSPACE
+                            setTypeface(typeface, Typeface.BOLD)
+                            setTextColor(Color.parseColor(state.colorHex))
+                            setPadding(0, 0, dp(8), 0)
+                        }
+                        row.addView(badge)
+
+                        val pathTv = MaterialTextView(this).apply {
+                            text = relPath
+                            textSize = 12f
+                            typeface = Typeface.MONOSPACE
+                            setTextColor(palette.fgColor)
+                            setSingleLine(true)
+                            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                        }
+                        row.addView(pathTv)
+                        filesListLayout.addView(row)
+                    }
+                }
+            }
+        }.start()
+    }
+
+    /**
+     * Renders Tab 2 of the Project Sidebar: Document Symbols (Outline) extracted from the active buffer.
+     */
+    private fun renderSidebarOutlinePage() {
+        val container = binding.sidebarOutlineContainer
+        container.removeAllViews()
+
+        val palette = ModernUiHelper.resolvePalette(this)
+        val density = resources.displayMetrics.density
+        fun dp(v: Int): Int = (v * density).roundToInt()
+
+        val active = currentFile
+        if (active == null) {
+            val emptyTv = MaterialTextView(this).apply {
+                text = "Open a source file to inspect its classes, functions, and methods."
+                textSize = 12f
+                setTextColor(palette.subtleColor)
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+            }
+            container.addView(emptyTv)
+            return
+        }
+
+        val text = binding.editor.text.toString()
+        val declRegex = Regex(
+            "^(\\s*)(?:(?:public|private|protected|internal|open|abstract|final|static|suspend|inline|override|data|sealed|export|async|pub)\\s+)*(class|interface|object|enum|struct|trait|fun|def|fn|function|func)\\s+([A-Za-z_][A-Za-z0-9_]*)"
+        )
+
+        data class OutlineSymbol(val kind: String, val name: String, val line1: Int, val indent: Int)
+        val symbols = ArrayList<OutlineSymbol>()
+
+        text.lineSequence().forEachIndexed { idx, rawLine ->
+            val m = declRegex.find(rawLine)
+            if (m != null) {
+                val leadingSpaces = m.groupValues[1].length
+                val kw = m.groupValues[2]
+                val symName = m.groupValues[3]
+                symbols.add(OutlineSymbol(kw, symName, idx + 1, (leadingSpaces / 4).coerceIn(0, 4)))
+            }
+        }
+
+        if (symbols.isEmpty()) {
+            val emptyTv = MaterialTextView(this).apply {
+                this.text = "No top-level classes or functions detected in ${active.displayName}."
+                textSize = 12f
+                setTextColor(palette.subtleColor)
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+            }
+            container.addView(emptyTv)
+            return
+        }
+
+        for (sym in symbols) {
+            val isType = sym.kind in setOf("class", "interface", "object", "enum", "struct", "trait")
+            val badgeText = if (isType) "C" else "ƒ"
+            val badgeColor = if (isType) Color.parseColor("#FFB74D") else Color.parseColor("#4FC3F7")
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(38)
+                setPadding(dp(12 + sym.indent * 14), dp(6), dp(12), dp(6))
+                setOnClickListener {
+                    jumpToPosition(sym.line1, 0)
+                    closeProjectSidebar()
+                }
+            }
+
+            val kindBadge = MaterialTextView(this).apply {
+                this.text = badgeText
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(badgeColor)
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply {
+                    marginEnd = dp(8)
+                }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(5).toFloat()
+                    setColor(ModernUiHelper.withAlpha(badgeColor, 0x22))
+                }
+            }
+            row.addView(kindBadge)
+
+            val nameTv = MaterialTextView(this).apply {
+                this.text = sym.name
+                textSize = 12.5f
+                typeface = Typeface.MONOSPACE
+                setTextColor(palette.fgColor)
+                setTypeface(typeface, if (isType) Typeface.BOLD else Typeface.NORMAL)
+                setSingleLine(true)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            row.addView(nameTv)
+
+            val lineTv = MaterialTextView(this).apply {
+                this.text = ":${sym.line1}"
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTextColor(palette.subtleColor)
+            }
+            row.addView(lineTv)
+
+            container.addView(row)
+        }
+    }
+
+    /**
+     * Shows a modern Material 3 App-Internal Project Manager bottom sheet.
      */
     private fun showAppDirProjectManagerDialog() {
         val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
@@ -1380,12 +2108,13 @@ class MainActivity : AppCompatActivity() {
                 ModernUiHelper.MenuOption(
                     id = idx,
                     title = dir.name,
-                    subtitle = "$guestPath • ${dir.listFiles()?.size ?: 0} items • Ubuntu Zsh ready",
+                    subtitle = "$guestPath • ${dir.listFiles()?.size ?: 0} items",
                     iconRes = R.drawable.ic_folder,
+                    badgeText = if (isCurrent) "ACTIVE" else null,
                     isSelected = isCurrent,
                     action = {
                         switchActiveAppProject(dir)
-                        Toast.makeText(this, "Loaded Ubuntu project: $guestPath", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Loaded project: ${dir.name}", Toast.LENGTH_SHORT).show()
                     }
                 )
             )
@@ -1404,6 +2133,30 @@ class MainActivity : AppCompatActivity() {
         options.add(
             ModernUiHelper.MenuOption(
                 id = 101,
+                title = "Clone GitHub Repository…",
+                subtitle = "Clone any public or private repository into /root/projects/",
+                iconRes = R.drawable.ic_git,
+                action = {
+                    GitHubManager.showCloneRepoDialog(this) { clonedDir ->
+                        switchActiveAppProject(clonedDir)
+                    }
+                }
+            )
+        )
+
+        options.add(
+            ModernUiHelper.MenuOption(
+                id = 102,
+                title = "Import External Folder into Ubuntu Dir",
+                subtitle = "Copy external folder into /root/projects/ with full +x permissions",
+                iconRes = R.drawable.ic_folder_open,
+                action = { importFolderToAppDirLauncher.launch(null) }
+            )
+        )
+
+        options.add(
+            ModernUiHelper.MenuOption(
+                id = 103,
                 title = "Open Active Project in Ubuntu Zsh Terminal",
                 subtitle = "Launch Zsh directly in ${ProjectManager.guestPathForDir(this, activeDir)}",
                 iconRes = R.drawable.ic_terminal,
@@ -1414,21 +2167,11 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
-        options.add(
-            ModernUiHelper.MenuOption(
-                id = 102,
-                title = "Import External Folder into Ubuntu Dir",
-                subtitle = "Copy external folder into /root/projects/ with full +x permissions",
-                iconRes = R.drawable.ic_folder,
-                action = { importFolderToAppDirLauncher.launch(null) }
-            )
-        )
-
         ModernUiHelper.showModernContextMenu(
             context = this,
-            title = "Ubuntu Directory Projects",
+            title = "Switch or Create Project",
             subtitle = "Stored in /root/projects inside Ubuntu 24.04 LTS",
-            headerIconRes = R.drawable.ic_folder,
+            headerIconRes = R.drawable.ic_folder_open,
             options = options
         )
     }
@@ -1472,12 +2215,13 @@ class MainActivity : AppCompatActivity() {
         openTabs.clear()
         activeTabIndex = -1
         openInitialWorkspaceTabs()
-        refreshFileTree()
-        openProjectSidebar()
+        updateToolbarProjectTitle()
+        refreshActiveSidebarPage()
+        observeActiveProjectDirectory()
     }
 
     private fun openProjectSidebar() {
-        refreshFileTree()
+        refreshActiveSidebarPage()
         binding.mainDrawerLayout.openDrawer(GravityCompat.START)
     }
 
@@ -1488,15 +2232,17 @@ class MainActivity : AppCompatActivity() {
     private fun refreshFileTree() {
         val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
         val activeName = activeDir.name
-        binding.projectTitleText.text = activeName
+        binding.projectTitleText.text = "$activeName ▾"
         binding.projectModeSubtitle.text = ProjectManager.guestPathForDir(this, activeDir)
-        lastTreeSignature = ProjectManager.computeTreeSignature(this)
+        updateToolbarProjectTitle()
 
         val container = binding.fileTreeContainer
         container.removeAllViews()
 
         val fgColor = editorController.currentForegroundColor()
         val subtleColor = editorController.currentSubtleColor()
+        val isDark = editorController.isCurrentThemeDark()
+        val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
         val activeFile = currentFile
         val density = resources.displayMetrics.density
 
@@ -1529,15 +2275,17 @@ class MainActivity : AppCompatActivity() {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                val indentPx = ((if (treeFilterQuery.isNotEmpty()) 0 else node.depth) * 16 + 10) * density
+                minimumHeight = (38 * density).toInt()
+                val depthToUse = if (treeFilterQuery.isNotEmpty()) 0 else node.depth
+                val indentPx = (depthToUse * 16 + 10) * density
                 setPadding(
                     indentPx.toInt(),
-                    (7 * density).toInt(),
+                    (6 * density).toInt(),
                     (10 * density).toInt(),
-                    (7 * density).toInt()
+                    (6 * density).toInt()
                 )
                 if (isCurrentOpenFile) {
-                    setBackgroundColor(Color.parseColor("#24FFB74D"))
+                    setBackgroundColor(ModernUiHelper.withAlpha(accentColor, 0x22))
                 }
                 setOnClickListener {
                     if (node.isDirectory) {
@@ -1560,6 +2308,20 @@ class MainActivity : AppCompatActivity() {
                     showNodeContextMenu(node)
                     true
                 }
+            }
+
+            // Subtle vertical indent guide bar for nested children
+            if (treeFilterQuery.isEmpty() && node.depth > 0) {
+                val guideBar = View(this).apply {
+                    setBackgroundColor(ModernUiHelper.withAlpha(subtleColor, 0x38))
+                    layoutParams = LinearLayout.LayoutParams(
+                        (1.5f * density).toInt().coerceAtLeast(1),
+                        (20 * density).toInt()
+                    ).apply {
+                        marginEnd = (6 * density).toInt()
+                    }
+                }
+                row.addView(guideBar)
             }
 
             val chevron = MaterialTextView(this).apply {
@@ -1596,7 +2358,7 @@ class MainActivity : AppCompatActivity() {
             val labelView = MaterialTextView(this).apply {
                 text = if (treeFilterQuery.isNotEmpty()) node.relativePath else node.name
                 textSize = 13f
-                setTextColor(if (isCurrentOpenFile) Color.parseColor("#FFB74D") else fgColor)
+                setTextColor(if (isCurrentOpenFile) accentColor else fgColor)
                 setTypeface(typeface, if (isCurrentOpenFile) Typeface.BOLD else Typeface.NORMAL)
                 setSingleLine(true)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -1617,20 +2379,20 @@ class MainActivity : AppCompatActivity() {
                 row.addView(gitBadge)
             }
 
-            // Quick context menu button (⋯) on each node row for easy access in addition to long-press
+            // Accessible 28dp context menu button (⋯) on each node row
             val moreBtn = ImageButton(this, null, 0, R.style.PocketDev_IconButton).apply {
                 setImageResource(R.drawable.ic_more_vert)
                 imageTintList = ColorStateList.valueOf(subtleColor)
-                alpha = 0.7f
+                alpha = 0.75f
                 setPadding(
-                    (4 * density).toInt(),
-                    (4 * density).toInt(),
-                    (4 * density).toInt(),
-                    (4 * density).toInt()
+                    (5 * density).toInt(),
+                    (5 * density).toInt(),
+                    (5 * density).toInt(),
+                    (5 * density).toInt()
                 )
                 layoutParams = LinearLayout.LayoutParams(
-                    (22 * density).toInt(),
-                    (22 * density).toInt()
+                    (28 * density).toInt(),
+                    (28 * density).toInt()
                 )
                 setOnClickListener {
                     showNodeContextMenu(node)
@@ -1665,7 +2427,7 @@ class MainActivity : AppCompatActivity() {
                     id = 0,
                     title = "New File in '${node.name}'",
                     subtitle = "Create a new file inside this folder",
-                    iconRes = R.drawable.ic_add,
+                    iconRes = R.drawable.ic_new_file,
                     action = { promptCreateInProject(node, isDirectory = false) }
                 ),
                 ModernUiHelper.MenuOption(
@@ -1707,7 +2469,7 @@ class MainActivity : AppCompatActivity() {
                     id = 0,
                     title = "Open '${node.name}'",
                     subtitle = "Open file in editor tab",
-                    iconRes = R.drawable.ic_folder,
+                    iconRes = R.drawable.ic_new_file,
                     action = {
                         node.localFile?.let { openLocalFileInTab(it) }
                         node.safDocUri?.let { openUriInTab(it, node.name) }
@@ -1742,7 +2504,7 @@ class MainActivity : AppCompatActivity() {
                     id = 11,
                     title = "Git Diff for '${node.name}'",
                     subtitle = "View working-tree line changes for this file",
-                    iconRes = R.drawable.ic_diagnostics,
+                    iconRes = R.drawable.ic_git,
                     action = {
                         closeProjectSidebar()
                         GitHubManager.showDiffViewerDialog(
@@ -1857,7 +2619,6 @@ class MainActivity : AppCompatActivity() {
                             expandedFolderKeys.clear()
                             expandedFolderKeys.addAll(updatedKeys)
 
-                            // Update any open tabs inside the renamed folder
                             openTabs.forEach { tab ->
                                 val tf = tab.localFile
                                 if (tf != null && tf.absolutePath.startsWith("$oldPrefix/")) {
@@ -1866,7 +2627,6 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         } else {
-                            // Update open tab if this file is currently open
                             openTabs.forEachIndexed { idx, tab ->
                                 if (tab.matchesTarget(null, oldFile)) {
                                     tab.localFile = newFile
@@ -1915,21 +2675,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------------------------------------------------------- Search (In-File & Project-Wide Ultra-Fast BMH)
+    // ---------------------------------------------------------------- Search (Collapsible Replace & Tinted Filter Pills)
 
     private fun setupSearchBar() {
+        TooltipCompat.setTooltipText(binding.btnToggleReplaceRow, "Expand / Collapse Replace")
+        TooltipCompat.setTooltipText(binding.btnSearchCase, "Match Case")
+        TooltipCompat.setTooltipText(binding.btnSearchRegex, "Regular Expression")
         TooltipCompat.setTooltipText(binding.btnSearchProjectMode, "Toggle Search Across Project")
+
+        binding.btnToggleReplaceRow.setOnClickListener {
+            isReplaceRowExpanded = !isReplaceRowExpanded
+            updateSearchModeUi()
+        }
         binding.btnSearchClose.setOnClickListener { hideFindBar() }
         binding.btnSearchNext.setOnClickListener { binding.editor.searcher.gotoNext() }
         binding.btnSearchPrev.setOnClickListener { binding.editor.searcher.gotoPrevious() }
         binding.btnSearchCase.setOnClickListener {
             searchCaseSensitive = !searchCaseSensitive
-            it.alpha = if (searchCaseSensitive) 1f else 0.5f
+            updateSearchFilterButtonPills()
             commitSearch()
         }
         binding.btnSearchRegex.setOnClickListener {
             searchRegex = !searchRegex
-            it.alpha = if (searchRegex) 1f else 0.5f
+            updateSearchFilterButtonPills()
             commitSearch()
         }
         binding.btnSearchProjectMode.setOnClickListener {
@@ -1960,9 +2728,43 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun updateSearchFilterButtonPills() {
+        val fgColor = editorController.currentForegroundColor()
+        val subtleColor = editorController.currentSubtleColor()
+        val isDark = editorController.isCurrentThemeDark()
+        val accentColor = if (isDark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val density = resources.displayMetrics.density
+
+        fun styleFilterToggle(btn: ImageButton, active: Boolean) {
+            btn.imageTintList = ColorStateList.valueOf(if (active) accentColor else subtleColor)
+            btn.background = if (active) {
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 8f * density
+                    setColor(ModernUiHelper.withAlpha(accentColor, 0x24))
+                    setStroke((1 * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accentColor, 0x70))
+                }
+            } else {
+                null
+            }
+        }
+
+        styleFilterToggle(binding.btnSearchCase, searchCaseSensitive)
+        styleFilterToggle(binding.btnSearchRegex, searchRegex)
+        styleFilterToggle(binding.btnSearchProjectMode, isProjectSearchMode)
+        binding.btnToggleReplaceRow.imageTintList = ColorStateList.valueOf(
+            if (isReplaceRowExpanded && !isProjectSearchMode) accentColor else fgColor
+        )
+    }
+
     private fun updateSearchModeUi() {
-        binding.btnSearchProjectMode.alpha = if (isProjectSearchMode) 1f else 0.5f
-        binding.replaceRow.visibility = if (isProjectSearchMode) View.GONE else View.VISIBLE
+        val showReplace = isReplaceRowExpanded && !isProjectSearchMode
+        binding.replaceRow.visibility = if (showReplace) View.VISIBLE else View.GONE
+        binding.btnToggleReplaceRow.visibility = if (isProjectSearchMode) View.GONE else View.VISIBLE
+        binding.btnToggleReplaceRow.setImageResource(
+            if (showReplace) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+        )
+        updateSearchFilterButtonPills()
         if (isProjectSearchMode) {
             selectBottomPanelTab(TAB_SEARCH_RESULTS, expand = true)
         }
@@ -2047,6 +2849,7 @@ class MainActivity : AppCompatActivity() {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = (34 * density).toInt()
                 setPadding(
                     (6 * density).toInt(),
                     (5 * density).toInt(),
@@ -2161,8 +2964,8 @@ class MainActivity : AppCompatActivity() {
                 anySaved = true
             }
         }
-        if (anySaved) {
-            refreshFileTree()
+        if (anySaved && binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+            refreshActiveSidebarPage()
         }
     }
 
@@ -2244,16 +3047,15 @@ class MainActivity : AppCompatActivity() {
         binding.positionText.text =
             getString(R.string.line_col, cursor.leftLine + 1, cursor.leftColumn)
 
-        val fileName = currentFile?.displayName ?: "untitled"
+        val fileName = currentFile?.displayName ?: "No File"
         val spec = MaterialFileIcons.resolveFileSpec(fileName)
         binding.languageStatusText.text = spec.badgeText
     }
 
-
     // ---------------------------------------------------------------- Sticky-Scroll, LSP Hover / Definition / Rename, Build/Run & GitHub
 
     private fun updateStickyScrollHeader() {
-        if (!settings.stickyScrollEnabled) {
+        if (!settings.stickyScrollEnabled || openTabs.isEmpty()) {
             binding.stickyScrollBar.visibility = View.GONE
             return
         }
@@ -2284,6 +3086,7 @@ class MainActivity : AppCompatActivity() {
 
         selectBottomPanelTab(TAB_BUILD_OUTPUT, expand = true)
         binding.buildOutputContainer.removeAllViews()
+        binding.btnBottomSheetStop.visibility = View.VISIBLE
         val baseTitle = getString(R.string.tab_build_output)
         binding.bottomSheetTabs.getTabAt(TAB_BUILD_OUTPUT)?.text = "$baseTitle (Running…)"
 
@@ -2296,6 +3099,7 @@ class MainActivity : AppCompatActivity() {
             },
             onFinished = { exitCode, elapsedMs ->
                 runOnUiThread {
+                    binding.btnBottomSheetStop.visibility = View.GONE
                     val statusLine = if (exitCode == 0) {
                         "✓ Process finished with exit code 0 (${elapsedMs} ms)"
                     } else {
@@ -2316,7 +3120,7 @@ class MainActivity : AppCompatActivity() {
         val color = when {
             isStatusSummary && !isError -> Color.parseColor("#66BB6A")
             isStatusSummary && isError -> Color.parseColor("#FF5252")
-            lineText.startsWith("▶") -> Color.parseColor("#FFB74D")
+            lineText.startsWith("▶") || lineText.startsWith("›") -> Color.parseColor("#FFB74D")
             lineText.contains("error:", ignoreCase = true) || lineText.contains("Exception") -> Color.parseColor("#FF7B72")
             lineText.contains("warning:", ignoreCase = true) -> Color.parseColor("#FFB300")
             else -> fgColor
@@ -2424,6 +3228,16 @@ class MainActivity : AppCompatActivity() {
             ),
             ModernUiHelper.MenuOption(
                 id = 4,
+                title = "Document Outline (Classes & Functions)",
+                subtitle = "Open Outline tab in sidebar drawer for $fileName",
+                iconRes = R.drawable.ic_outline,
+                action = {
+                    selectSidebarTab(SIDEBAR_TAB_OUTLINE)
+                    openProjectSidebar()
+                }
+            ),
+            ModernUiHelper.MenuOption(
+                id = 5,
                 title = "Toggle Code Folding at Cursor",
                 subtitle = "Fold or unfold the enclosing block at Ln ${line0 + 1}",
                 iconRes = R.drawable.ic_expand,
@@ -2433,7 +3247,7 @@ class MainActivity : AppCompatActivity() {
                 }
             ),
             ModernUiHelper.MenuOption(
-                id = 5,
+                id = 6,
                 title = "Unfold All Code Blocks",
                 subtitle = "Restore all folded code blocks in active file",
                 iconRes = R.drawable.ic_expand,
@@ -2443,10 +3257,10 @@ class MainActivity : AppCompatActivity() {
                 }
             ),
             ModernUiHelper.MenuOption(
-                id = 6,
+                id = 7,
                 title = "Format Document",
                 subtitle = "Run clang-format / prettier / gofmt / structural formatter",
-                iconRes = R.drawable.ic_indent,
+                iconRes = R.drawable.ic_format_align,
                 action = { formatCurrentDocument() }
             )
         )
@@ -2484,7 +3298,9 @@ class MainActivity : AppCompatActivity() {
                     title = "${hover.symbol} • ${hover.sourceServer}",
                     message = "${hover.signature}\n\n${hover.documentation}",
                     confirmText = if (hover.declarationLocation != null) "Go to Definition" else "OK",
-                    cancelText = "Close"
+                    cancelText = "Close",
+                    iconRes = R.drawable.ic_info,
+                    isDestructive = false
                 ) {
                     hover.declarationLocation?.let { loc ->
                         navigateToSymbolLocation(loc)
@@ -2565,7 +3381,7 @@ class MainActivity : AppCompatActivity() {
                         relativePath = loc.relativePath,
                         lineNumber = loc.line1Based,
                         columnNumber = loc.col0Based,
-                        matchLength = (symbol ?: "").length.coerceAtLeast(1),
+                        matchLength = symbol.length.coerceAtLeast(1),
                         linePreview = loc.preview,
                         localFile = loc.file,
                         safUri = null
@@ -2652,7 +3468,8 @@ class MainActivity : AppCompatActivity() {
                 switchActiveAppProject(clonedDir)
             },
             onTreeRefreshRequested = {
-                refreshFileTree()
+                refreshActiveSidebarPage()
+                updateToolbarProjectTitle()
             }
         )
     }
@@ -2661,5 +3478,9 @@ class MainActivity : AppCompatActivity() {
         const val TAB_CODE_ANALYSIS = 0
         const val TAB_SEARCH_RESULTS = 1
         const val TAB_BUILD_OUTPUT = 2
+
+        const val SIDEBAR_TAB_FILES = 0
+        const val SIDEBAR_TAB_GIT = 1
+        const val SIDEBAR_TAB_OUTLINE = 2
     }
 }

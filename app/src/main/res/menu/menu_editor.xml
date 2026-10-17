@@ -27,7 +27,7 @@
         android:icon="@drawable/ic_terminal"
         app:showAsAction="always" />
 
-    <!-- Overflow Menu (⋮) Items -->
+    <!-- Overflow Menu (⋮) Items with distinct semantic icons -->
     <item
         android:id="@+id/action_run_config"
         android:title="@string/menu_run_config"
@@ -37,7 +37,7 @@
     <item
         android:id="@+id/action_format_document"
         android:title="@string/menu_format_document"
-        android:icon="@drawable/ic_indent"
+        android:icon="@drawable/ic_format_align"
         app:showAsAction="never" />
 
     <item
@@ -49,35 +49,37 @@
     <item
         android:id="@+id/action_github"
         android:title="@string/menu_github"
-        android:icon="@drawable/ic_folder"
+        android:icon="@drawable/ic_git"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_undo"
         android:title="@string/menu_undo"
+        android:icon="@drawable/ic_undo"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_redo"
         android:title="@string/menu_redo"
+        android:icon="@drawable/ic_redo"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_project_search"
         android:title="@string/menu_project_search"
-        android:icon="@drawable/ic_replace"
+        android:icon="@drawable/ic_folder_search"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_open"
         android:title="@string/menu_open"
-        android:icon="@drawable/ic_folder"
+        android:icon="@drawable/ic_new_file"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_open_folder"
         android:title="@string/menu_open_folder"
-        android:icon="@drawable/ic_folder"
+        android:icon="@drawable/ic_folder_open"
         app:showAsAction="never" />
 
     <item

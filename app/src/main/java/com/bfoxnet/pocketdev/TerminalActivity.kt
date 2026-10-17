@@ -28,10 +28,17 @@ import androidx.core.view.WindowCompat
 import com.bfoxnet.pocketdev.databinding.ActivityTerminalBinding
 import com.google.android.material.textview.MaterialTextView
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Termux (`https://github.com/termux/termux-app` `TermuxActivity`) implementation
  * powered by a real Ubuntu 24.04.5 LTS (`noble`) rootfs + native Android `PRoot` (`UbuntuProotManager`).
+ *
+ * Upgraded UX:
+ * - Includes a compact top session strip (`@+id/terminal_top_bar`) with a 1-tap `← Editor` return chip,
+ *   horizontal clickable session tabs (`[1] zsh`), `+ New Session`, and `☰ Drawer` button.
+ * - Includes an explicit `[Aa]` button (`@+id/btn_toolbar_drawer`) on the helper keyboard bar to toggle
+ *   between the 2-row Extra Keys grid and the full-line Command Text Input bar.
  */
 class TerminalActivity : AppCompatActivity() {
 
@@ -43,6 +50,7 @@ class TerminalActivity : AppCompatActivity() {
     private var toolbarVisible: Boolean = true
     private var keepScreenOnEnabled: Boolean = false
     private var activeStyleIndex: Int = 0
+    private var isTextInputPageActive: Boolean = false
     private var lastToast: Toast? = null
 
     private var ctrlKeyView: MaterialTextView? = null
@@ -189,15 +197,42 @@ class TerminalActivity : AppCompatActivity() {
     }
 
     private fun setupDrawerAndToolbarControls() {
-        TooltipCompat.setTooltipText(binding.btnToolbarDrawer, "Open Session Drawer")
-        TooltipCompat.setTooltipText(binding.btnToolbarBack, "Back to Main App")
+        TooltipCompat.setTooltipText(binding.btnTopEditorBack, "Return to Code Editor")
+        TooltipCompat.setTooltipText(binding.btnTopNewSession, "New Terminal Session (Long-press: Named/Failsafe)")
+        TooltipCompat.setTooltipText(binding.btnTopDrawer, "Open Session Drawer")
+        TooltipCompat.setTooltipText(binding.btnToolbarDrawer, "Switch Between Extra Keys & Command Input Bar")
+        TooltipCompat.setTooltipText(binding.btnToolbarBack, "Return to Code Editor")
 
-        binding.btnToolbarDrawer.setOnClickListener {
+        binding.btnTopEditorBack.setOnClickListener {
+            finish()
+        }
+        binding.btnTopNewSession.setOnClickListener {
+            addNewSession(isFailsafe = false, sessionName = null, autorunCommand = null)
+        }
+        binding.btnTopNewSession.setOnLongClickListener {
+            showCreateNamedSessionDialog()
+            true
+        }
+        binding.btnTopDrawer.setOnClickListener {
             if (binding.terminalDrawerLayout.isDrawerOpen(GravityCompat.START)) {
                 binding.terminalDrawerLayout.closeDrawer(GravityCompat.START)
             } else {
                 binding.terminalDrawerLayout.openDrawer(GravityCompat.START)
             }
+        }
+
+        // Bottom helper bar top-left button toggles between Extra Keys grid (Page 0) and Command Input bar (Page 1)
+        binding.btnToolbarDrawer.setOnClickListener { v ->
+            OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
+            showExtraKeysPage(if (isTextInputPageActive) 0 else 1)
+        }
+        binding.btnToolbarDrawer.setOnLongClickListener {
+            if (binding.terminalDrawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.terminalDrawerLayout.closeDrawer(GravityCompat.START)
+            } else {
+                binding.terminalDrawerLayout.openDrawer(GravityCompat.START)
+            }
+            true
         }
         binding.btnToolbarBack.setOnClickListener {
             finish()
@@ -439,7 +474,8 @@ class TerminalActivity : AppCompatActivity() {
     }
 
     private fun showExtraKeysPage(page: Int) {
-        if (page == 1) {
+        isTextInputPageActive = (page == 1)
+        if (isTextInputPageActive) {
             binding.extraKeysGridPage.visibility = View.GONE
             binding.extraKeysTextInputPage.visibility = View.VISIBLE
             binding.terminalToolbarTextInput.requestFocus()
@@ -524,7 +560,7 @@ class TerminalActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------------------------------------------------------- Persistent Session Management
+    // ---------------------------------------------------------------- Persistent Session Management & Top Tab Strip
 
     private fun bindSessionCallbacks(session: TerminalSession) {
         session.onTitleChanged = {
@@ -613,25 +649,75 @@ class TerminalActivity : AppCompatActivity() {
 
     private fun renderSessionsDrawerList() {
         val drawerList = binding.drawerSessionsList
+        val topTabsContainer = binding.terminalSessionTabsContainer
         drawerList.removeAllViews()
+        topTabsContainer.removeAllViews()
 
         val style = TERMUX_STYLES[activeStyleIndex.coerceIn(0, TERMUX_STYLES.lastIndex)]
         val accentColor = Color.parseColor(style.accentHex)
+        val keyBgColor = Color.parseColor(style.keyBgHex)
+        val keyFgColor = Color.parseColor(style.keyFgHex)
         val density = resources.displayMetrics.density
+        fun dp(v: Int): Int = (v * density).roundToInt()
 
         persistentSessions.forEachIndexed { idx, s ->
             val isActive = idx == persistentActiveSessionIndex
+            val displayTitle = buildString {
+                append("[${idx + 1}] ")
+                append(s.title)
+                if (!s.sessionName.isNullOrEmpty()) {
+                    append(" (${s.sessionName})")
+                }
+                if (s.isExecutingCommand) {
+                    append(" ●")
+                }
+            }
+
+            // 1. Render Top Session Tab Pill
+            val topTabPill = MaterialTextView(this).apply {
+                text = displayTitle
+                textSize = 11f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
+                setTextColor(if (isActive) accentColor else keyFgColor)
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(4), dp(10), dp(4))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(7).toFloat()
+                    setColor(if (isActive) ModernUiHelper.withAlpha(accentColor, 0x24) else keyBgColor)
+                    if (isActive) {
+                        setStroke(dp(1), ModernUiHelper.withAlpha(accentColor, 0x80))
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    dp(28)
+                ).apply {
+                    marginEnd = dp(6)
+                }
+                setOnClickListener {
+                    switchToSession(idx)
+                }
+                setOnLongClickListener {
+                    showRenameSessionDialog(s)
+                    true
+                }
+            }
+            topTabsContainer.addView(topTabPill)
+
+            // 2. Render Drawer Row
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(
-                    (12 * density).toInt(),
-                    (10 * density).toInt(),
-                    (12 * density).toInt(),
-                    (10 * density).toInt()
+                    dp(12),
+                    dp(10),
+                    dp(12),
+                    dp(10)
                 )
                 if (isActive) {
-                    setBackgroundColor(Color.parseColor("#2480DEEA"))
+                    setBackgroundColor(ModernUiHelper.withAlpha(accentColor, 0x20))
                 }
                 setOnClickListener {
                     switchToSession(idx)
@@ -646,21 +732,14 @@ class TerminalActivity : AppCompatActivity() {
             val indicator = View(this).apply {
                 setBackgroundColor(if (isActive) accentColor else Color.TRANSPARENT)
                 layoutParams = LinearLayout.LayoutParams(
-                    (3 * density).toInt(),
-                    (18 * density).toInt()
+                    dp(3),
+                    dp(18)
                 ).apply {
-                    marginEnd = (10 * density).toInt()
+                    marginEnd = dp(10)
                 }
             }
             row.addView(indicator)
 
-            val displayTitle = buildString {
-                append("[${idx + 1}] ")
-                append(s.title)
-                if (!s.sessionName.isNullOrEmpty()) {
-                    append(" (${s.sessionName})")
-                }
-            }
             val labelView = MaterialTextView(this).apply {
                 text = displayTitle
                 textSize = 13f
@@ -679,7 +758,7 @@ class TerminalActivity : AppCompatActivity() {
         ModernUiHelper.showModernInputDialog(
             context = this,
             title = "Create Named Session",
-            subtitle = "Start a new persistent Ubuntu 24.04 bash or failsafe sh session",
+            subtitle = "Start a new persistent Ubuntu 24.04 Zsh or failsafe sh session",
             hint = "Session name (optional)",
             positiveText = "Create",
             neutralText = "Failsafe",
@@ -824,6 +903,17 @@ class TerminalActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
 
         binding.terminalRoot.setBackgroundColor(bg)
+        binding.terminalTopBar.setBackgroundColor(toolbarBg)
+        binding.btnTopEditorBack.setTextColor(accent)
+        binding.btnTopEditorBack.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 7f * density
+            setColor(keyBg)
+            setStroke((1 * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accent, 0x55))
+        }
+        binding.btnTopNewSession.imageTintList = ColorStateList.valueOf(accent)
+        binding.btnTopDrawer.imageTintList = ColorStateList.valueOf(keyFg)
+
         binding.terminalView.setTerminalBackground(bg)
         binding.terminalView.setCursorColor(cursor)
         binding.terminalView.setSelectionAccentColor(accent)
@@ -857,7 +947,7 @@ class TerminalActivity : AppCompatActivity() {
         renderSessionsDrawerList()
 
         window?.let { win ->
-            win.statusBarColor = bg
+            win.statusBarColor = toolbarBg
             win.navigationBarColor = toolbarBg
             val controller = WindowCompat.getInsetsController(win, binding.terminalDrawerLayout)
             controller.isAppearanceLightStatusBars = !style.isDark

@@ -17,7 +17,7 @@
             android:id="@+id/toolbar"
             style="@style/AndroidIDE.Toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="46dp"
             android:background="@color/chrome_background"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="@string/lsp_title" />
@@ -28,14 +28,15 @@
             android:background="#26888888" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Top Action & Filter Bar -->
+    <!-- Top Search & Action Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp">
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/lsp_filter_input"
@@ -59,6 +60,47 @@
             android:insetBottom="0dp"
             android:text="@string/lsp_install_popular"
             android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Category Filter Pills: [All] [Installed] [Popular] -->
+    <LinearLayout
+        android:id="@+id/lsp_filter_chips_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/chip_lsp_all"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:text="All Servers"
+            android:textSize="11.5sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/chip_lsp_installed"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:text="Installed"
+            android:textSize="11.5sp" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/chip_lsp_popular"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:text="Popular"
+            android:textSize="11.5sp" />
     </LinearLayout>
 
     <!-- Scrollable List of Language Servers -->

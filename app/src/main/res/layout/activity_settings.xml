@@ -23,7 +23,7 @@
             android:layout_height="46dp"
             android:background="@color/chrome_background"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:subtitle="Editor, Auto-Save, Ubuntu 24.04 Zsh &amp; LSP Preferences"
+            app:subtitle="Appearance, Code Editor, Terminal &amp; Ubuntu 24.04 Environment"
             app:title="@string/settings_title" />
 
         <View
@@ -47,7 +47,7 @@
             android:orientation="vertical"
             android:paddingBottom="28dp">
 
-            <!-- Section 1: Appearance -->
+            <!-- Section 1: Appearance + Live Code Preview -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/header_appearance"
                 style="@style/TextAppearance.Material3.LabelLarge"
@@ -59,6 +59,37 @@
                 android:text="@string/pref_section_appearance"
                 android:textColor="?attr/colorPrimary"
                 android:textStyle="bold" />
+
+            <!-- Live Theme, Font, Size & Ligature Preview Card -->
+            <LinearLayout
+                android:id="@+id/card_live_preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginBottom="10dp"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/preview_badge"
+                    style="@style/TextAppearance.Material3.LabelSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:text="LIVE EDITOR PREVIEW"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/preview_code_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:lineSpacingExtra="3dp"
+                    android:text="fun main(args: Array&lt;String&gt;) {\n    val ready = args.isNotEmpty() &amp;&amp; 1 != 0\n    if (ready) println(&quot;PocketDev =&gt; Ready&quot;)\n}"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/card_appearance"
@@ -85,7 +116,7 @@
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/sub_theme"
                             style="@style/PocketDev.PrefSubtitle"
-                            android:text="Editor syntax highlighting palette (App UI uses lightly orange accent)" />
+                            android:text="Editor syntax highlighting &amp; surface palette" />
                     </LinearLayout>
 
                     <com.google.android.material.textview.MaterialTextView
@@ -117,7 +148,7 @@
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/sub_font"
                             style="@style/PocketDev.PrefSubtitle"
-                            android:text="Monospace typeface for code &amp; terminal" />
+                            android:text="Monospace typeface for code editor &amp; terminal" />
                     </LinearLayout>
 
                     <com.google.android.material.textview.MaterialTextView
@@ -131,34 +162,56 @@
                     android:layout_marginHorizontal="16dp"
                     android:background="#1A888888" />
 
+                <!-- Inline Font Size Row + Material Slider -->
                 <LinearLayout
                     android:id="@+id/row_font_size"
-                    style="@style/PocketDev.PrefRow">
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="6dp">
 
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_font_size"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/pref_font_size" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_font_size"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Drag slider to scale editor text size (10–24 sp)" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_font_size"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/pref_font_size" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_font_size"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Default editor text scale in sp" />
+                            android:id="@+id/value_font_size"
+                            style="@style/PocketDev.PrefValue" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_font_size"
-                        style="@style/PocketDev.PrefValue" />
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_font_size"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:stepSize="1.0"
+                        android:value="14.0"
+                        android:valueFrom="10.0"
+                        android:valueTo="24.0" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 2: Code Editor & File Saving -->
+            <!-- Section 2: Code Editor, Intelligence & Auto-Save -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/header_editor"
                 style="@style/TextAppearance.Material3.LabelLarge"
@@ -248,6 +301,40 @@
                     android:id="@+id/switch_wrap"
                     style="@style/PocketDev.PrefRow"
                     android:text="@string/pref_word_wrap" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
+                <!-- Promoted directly from the hidden termux.properties dialog -->
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_sticky_scroll"
+                    style="@style/PocketDev.PrefRow"
+                    android:text="Sticky-Scroll Enclosing Class/Function Header" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_word_match"
+                    style="@style/PocketDev.PrefRow"
+                    android:text="Highlight Matching Words Under Cursor" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_code_folding"
+                    style="@style/PocketDev.PrefRow"
+                    android:text="Code Folding &amp; Block Indent Guides" />
             </LinearLayout>
 
             <!-- Section 3: Terminal & Zsh Shell Style -->
@@ -369,6 +456,40 @@
                     android:layout_marginHorizontal="16dp"
                     android:background="#1A888888" />
 
+                <!-- Promoted Haptic Feedback Picker Row -->
+                <LinearLayout
+                    android:id="@+id/row_haptic_feedback"
+                    style="@style/PocketDev.PrefRow">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/title_haptic_feedback"
+                            style="@style/PocketDev.PrefTitle"
+                            android:text="Extra-Keys &amp; Toolbar Haptics" />
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/sub_haptic_feedback"
+                            style="@style/PocketDev.PrefSubtitle"
+                            android:text="Tactile vibration feedback when tapping terminal extra keys or quick tools" />
+                    </LinearLayout>
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/value_haptic_feedback"
+                        style="@style/PocketDev.PrefValue"
+                        android:text="Light" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_terminal_toolbar"
                     style="@style/PocketDev.PrefRow"
@@ -381,9 +502,31 @@
                     android:background="#1A888888" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_terminal_sticky_ctrl"
+                    style="@style/PocketDev.PrefRow"
+                    android:text="Toggle-Sticky CTRL Key (Latches Until Next Key)" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_terminal_auto_wakelock"
+                    style="@style/PocketDev.PrefRow"
+                    android:text="Auto Wake-Lock While Terminal Command Runs" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A888888" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_terminal_keep_screen"
                     style="@style/PocketDev.PrefRow"
-                    android:text="Keep Screen On in Terminal" />
+                    android:text="Always Keep Screen On in Terminal" />
 
                 <View
                     android:layout_width="match_parent"
@@ -419,7 +562,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 4: Ubuntu 24.04 LTS • PRoot & Zsh Environment (No dummy QEMU/Alpine items) -->
+            <!-- Section 4: Ubuntu 24.04 LTS • PRoot & Zsh Environment -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/header_ubuntu"
                 style="@style/TextAppearance.Material3.LabelLarge"
@@ -550,12 +693,12 @@
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/title_ubuntu_sync"
                             style="@style/PocketDev.PrefTitle"
-                            android:text="Install / Repair Ubuntu 24.04.5 LTS + PRoot" />
+                            android:text="Install / Backup / Restore Ubuntu 24.04.5 LTS" />
 
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/sub_ubuntu_sync"
                             style="@style/PocketDev.PrefSubtitle"
-                            android:text="Download or repair official Canonical Ubuntu rootfs &amp; native PRoot" />
+                            android:text="Bootstrap rootfs, export .tar.gz backup, or restore offline archive" />
                     </LinearLayout>
 
                     <com.google.android.material.textview.MaterialTextView
@@ -565,7 +708,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 5: Environment, LSP & Terminal -->
+            <!-- Section 5: Language Servers & Toolchains -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/header_tools"
                 style="@style/TextAppearance.Material3.LabelLarge"
@@ -603,7 +746,7 @@
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/sub_lsp"
                             style="@style/PocketDev.PrefSubtitle"
-                            android:text="Install LSP servers &amp; language runtime packages via Ubuntu APT" />
+                            android:text="Manage stdio LSP servers &amp; language runtime packages" />
                     </LinearLayout>
 
                     <com.google.android.material.textview.MaterialTextView
@@ -684,13 +827,13 @@
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/sub_diag"
                             style="@style/PocketDev.PrefSubtitle"
-                            android:text="Verify TextMate &amp; Monarch grammars and color schemes" />
+                            android:text="Verify TextMate &amp; Monarch grammars, PRoot state, and runtime logs" />
                     </LinearLayout>
 
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/value_diag"
                         style="@style/PocketDev.PrefValue"
-                        android:text="Run" />
+                        android:text="Inspect" />
                 </LinearLayout>
 
                 <View
@@ -723,7 +866,7 @@
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/value_about"
                         style="@style/PocketDev.PrefValue"
-                        android:text="v2.0" />
+                        android:text="v2.1" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

@@ -11,17 +11,17 @@ import android.os.VibratorManager
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.math.roundToInt
 
 /**
- * First-run Onboarding guide & Extra-Keys Haptic Feedback helper:
- * - Explains the 1-tap Ubuntu 24.04.5 LTS + PRoot + Zsh (`robbyrussell` theme) bootstrap flow,
- *   real stdio LSP servers (`clangd`, `pyright`, `gopls`, `tsserver`, `rust-analyzer`),
- *   Compile/Run toolchains, Environment `.tar.gz` Backup/Restore, and GitHub integration.
+ * Interactive 3-Step First-Run Onboarding Wizard & Extra-Keys Haptic Feedback helper:
+ * - Step 1: Pick Editor Color Scheme & Monospace Font (live preview).
+ * - Step 2: 1-Tap Ubuntu 24.04.5 LTS + PRoot + Zsh (`robbyrussell` theme) setup status.
+ * - Step 3: Stdio LSP Servers, 1-Tap Compile/Run with interactive `stdin`, and Git source control.
  * - Provides configurable haptic feedback (`Off`, `Light`, `Medium`, `Strong`) for extra keys
  *   and quick toolbar buttons.
  */
@@ -64,144 +64,327 @@ object OnboardingAndHapticsHelper {
     fun showOnboardingDialog(
         context: Context,
         onBootstrapNow: () -> Unit,
-        onOpenLspManager: () -> Unit
+        onOpenLspManager: () -> Unit,
+        onThemeChanged: (() -> Unit)? = null
     ) {
         val settings = Settings(context)
-        val palette = ModernUiHelper.resolvePalette(context)
         val density = context.resources.displayMetrics.density
         fun dp(v: Int): Int = (v * density).roundToInt()
 
-        val root = LinearLayout(context).apply {
+        var currentStep = 0
+        val rootContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(20), dp(22), dp(16))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(22).toFloat()
-                setColor(palette.bgColor)
-                setStroke(dp(1), palette.strokeColor)
-            }
+            setPadding(dp(20), dp(6), dp(20), dp(14))
         }
 
-        val badge = TextView(context).apply {
-            text = "WELCOME TO POCKETDEV IDE"
-            textSize = 10.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(palette.accentColor)
-        }
-        root.addView(badge)
-
-        val title = TextView(context).apply {
-            text = "Ubuntu 24.04 PRoot • Real Stdio LSP • Git & Toolchain"
-            textSize = 17f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            setTextColor(palette.fgColor)
-            setPadding(0, dp(4), 0, dp(10))
-        }
-        root.addView(title)
-
-        val steps = listOf(
-            "1. Instant Ubuntu 24.04.5 + Zsh (robbyrussell)" to
-                "Tap 'Bootstrap Ubuntu' or run `ubuntu-bootstrap` once. PocketDev downloads the 28.5 MB Ubuntu 24.04 rootfs, configures PRoot + Oh-My-Zsh with the robbyrussell theme, and keeps a persistent shell daemon so `ls` and `pwd` execute in <20 ms.",
-            "2. Real ProcessBuilder Stdio LSP & Code Intelligence" to
-                "Install language servers (`clangd`, `pyright`, `gopls`, `typescript-language-server`, `rust-analyzer`, `jdtls`) from the LSP Manager. PocketDev spawns a real JSON-RPC 2.0 stdio loop with Hover Docs, Go-to-Definition, Find References, and Symbol Rename.",
-            "3. Compile & Run + Format Document" to
-                "Tap the ▶ Run button in the top bar (or long-press to customize arguments) to run Python, Node.js, Go, Java, Kotlin, C/C++, or Rust directly into the Build Output tab.",
-            "4. Backup/Restore & GitHub Integration" to
-                "Export your entire `/ubuntu` rootfs to a `.tar.gz` archive via Settings → Backup/Restore to skip setup on future installs, and sign in to GitHub (OAuth Device Flow or PAT) to clone, diff, commit, branch, pull, and push."
+        val scroll = ScrollView(context).apply { addView(rootContainer) }
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(
+            context = context,
+            contentView = scroll,
+            palette = ModernUiHelper.resolvePalette(context)
         )
 
-        for ((heading, body) in steps) {
-            val card = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = dp(8) }
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(12).toFloat()
-                    setColor(palette.cardColor)
-                    setStroke(dp(1), palette.strokeColor)
+        fun renderStep() {
+            rootContainer.removeAllViews()
+            val palette = ModernUiHelper.resolvePalette(context)
+
+            // Step indicator dots + badge
+            val topHeader = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val badge = TextView(context).apply {
+                text = "WELCOME TO POCKETDEV • STEP ${currentStep + 1} OF 3"
+                textSize = 10.5f
+                typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(palette.accentColor)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            topHeader.addView(badge)
+
+            val dotsRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            for (i in 0..2) {
+                val dot = View(context).apply {
+                    val active = i == currentStep
+                    layoutParams = LinearLayout.LayoutParams(if (active) dp(18) else dp(6), dp(6)).apply {
+                        marginStart = dp(4)
+                    }
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(3).toFloat()
+                        setColor(if (active) palette.accentColor else ModernUiHelper.withAlpha(palette.subColor, 0x55))
+                    }
+                }
+                dotsRow.addView(dot)
+            }
+            topHeader.addView(dotsRow)
+            rootContainer.addView(topHeader)
+
+            when (currentStep) {
+                0 -> {
+                    val title = TextView(context).apply {
+                        text = "1. Pick Your Editor Theme & Font"
+                        textSize = 16.5f
+                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        setTextColor(palette.fgColor)
+                        setPadding(0, dp(6), 0, dp(4))
+                    }
+                    rootContainer.addView(title)
+
+                    val sub = TextView(context).apply {
+                        text = "Tap any theme or programming font below to apply it live across the code editor:"
+                        textSize = 12f
+                        setTextColor(palette.subColor)
+                        setPadding(0, 0, 0, dp(10))
+                    }
+                    rootContainer.addView(sub)
+
+                    val featuredThemes = listOf("darcula", "tokyo_night", "catppuccin_mocha", "one_dark_pro", "dracula", "quietlight")
+                    val themeScroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
+                    val themeRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                    for (tId in featuredThemes) {
+                        val tObj = EditorController.themeById(tId)
+                        val selected = settings.editorTheme == tObj.id
+                        val chip = TextView(context).apply {
+                            text = if (selected) "✓ ${tObj.label}" else tObj.label
+                            textSize = 12f
+                            setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
+                            setTextColor(if (selected) palette.accentColor else palette.fgColor)
+                            setPadding(dp(12), dp(8), dp(12), dp(8))
+                            background = GradientDrawable().apply {
+                                shape = GradientDrawable.RECTANGLE
+                                cornerRadius = dp(10).toFloat()
+                                setColor(if (selected) ModernUiHelper.withAlpha(palette.accentColor, 0x22) else palette.inputBgColor)
+                                setStroke(dp(1), if (selected) palette.accentColor else palette.strokeColor)
+                            }
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ).apply { marginEnd = dp(8) }
+                            setOnClickListener {
+                                settings.editorTheme = tObj.id
+                                onThemeChanged?.invoke()
+                                renderStep()
+                            }
+                        }
+                        themeRow.addView(chip)
+                    }
+                    themeScroll.addView(themeRow)
+                    rootContainer.addView(themeScroll)
+
+                    val fontHdr = TextView(context).apply {
+                        text = "Programming Font (with OpenType Ligatures)"
+                        textSize = 11.5f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setTextColor(palette.accentColor)
+                        setPadding(0, dp(12), 0, dp(6))
+                    }
+                    rootContainer.addView(fontHdr)
+
+                    val fontScroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
+                    val fontRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                    for (fObj in Settings.FONTS) {
+                        val selected = settings.fontFamily == fObj.id
+                        val chip = TextView(context).apply {
+                            text = if (selected) "✓ ${fObj.label}" else fObj.label
+                            textSize = 12f
+                            setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
+                            setTextColor(if (selected) palette.accentColor else palette.fgColor)
+                            setPadding(dp(12), dp(8), dp(12), dp(8))
+                            background = GradientDrawable().apply {
+                                shape = GradientDrawable.RECTANGLE
+                                cornerRadius = dp(10).toFloat()
+                                setColor(if (selected) ModernUiHelper.withAlpha(palette.accentColor, 0x22) else palette.inputBgColor)
+                                setStroke(dp(1), if (selected) palette.accentColor else palette.strokeColor)
+                            }
+                            layoutParams = LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            ).apply { marginEnd = dp(8) }
+                            setOnClickListener {
+                                settings.fontFamily = fObj.id
+                                onThemeChanged?.invoke()
+                                renderStep()
+                            }
+                        }
+                        fontRow.addView(chip)
+                    }
+                    fontScroll.addView(fontRow)
+                    rootContainer.addView(fontScroll)
+                }
+
+                1 -> {
+                    val title = TextView(context).apply {
+                        text = "2. Ubuntu 24.04 LTS + Zsh (robbyrussell)"
+                        textSize = 16.5f
+                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        setTextColor(palette.fgColor)
+                        setPadding(0, dp(6), 0, dp(4))
+                    }
+                    rootContainer.addView(title)
+
+                    val isInstalled = UbuntuProotManager.isUbuntuInstalled(context)
+                    val card = LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(14), dp(12), dp(14), dp(12))
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            cornerRadius = dp(12).toFloat()
+                            setColor(palette.inputBgColor)
+                            setStroke(dp(1), palette.strokeColor)
+                        }
+                    }
+                    val statusLine = TextView(context).apply {
+                        text = if (isInstalled) "✓ Ubuntu 24.04.5 LTS Rootfs + PRoot Installed" else "⚡ Ready for 1-Tap Bootstrap (~28.5 MB)"
+                        textSize = 13f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setTextColor(if (isInstalled) Color.parseColor("#66BB6A") else palette.accentColor)
+                    }
+                    val desc = TextView(context).apply {
+                        text = "PocketDev runs a real Ubuntu 24.04.5 LTS userland via native Android PRoot with Oh-My-Zsh (robbyrussell), syntax-highlighting, autosuggestions, and offline .tar.gz Backup/Restore."
+                        textSize = 12f
+                        setTextColor(palette.subColor)
+                        setPadding(0, dp(6), 0, 0)
+                    }
+                    card.addView(statusLine)
+                    card.addView(desc)
+                    rootContainer.addView(card)
+                }
+
+                else -> {
+                    val title = TextView(context).apply {
+                        text = "3. Stdio LSP, Build/Run & Git Sidebar"
+                        textSize = 16.5f
+                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        setTextColor(palette.fgColor)
+                        setPadding(0, dp(6), 0, dp(4))
+                    }
+                    rootContainer.addView(title)
+
+                    val card = LinearLayout(context).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(14), dp(12), dp(14), dp(12))
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            cornerRadius = dp(12).toFloat()
+                            setColor(palette.inputBgColor)
+                            setStroke(dp(1), palette.strokeColor)
+                        }
+                    }
+                    val highlights = TextView(context).apply {
+                        text = "• Left Drawer Tabs: Switch seamlessly between File Tree, Git Source Control, and Document Symbols Outline.\n" +
+                            "• Draggable Bottom Panel: Inspect LSP diagnostics, project search hits, and streaming Build Output with interactive stdin.\n" +
+                            "• Real Stdio LSP: Install clangd, pyright, gopls, tsserver, or rust-analyzer from the LSP Manager."
+                        textSize = 12f
+                        setTextColor(palette.fgColor)
+                        setLineSpacing(2.5f * density, 1.08f)
+                    }
+                    card.addView(highlights)
+                    rootContainer.addView(card)
                 }
             }
-            val hView = TextView(context).apply {
-                text = heading
-                textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(palette.fgColor)
+
+            // Bottom Navigation Row
+            val btnRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                setPadding(0, dp(14), 0, 0)
             }
-            val bView = TextView(context).apply {
-                text = body
-                textSize = 11.5f
+
+            val skipBtn = TextView(context).apply {
+                text = "Skip"
+                textSize = 12.5f
                 setTextColor(palette.subColor)
-                setPadding(0, dp(3), 0, 0)
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                setOnClickListener {
+                    settings.onboardingCompleted = true
+                    sheetDialog.dismiss()
+                }
             }
-            card.addView(hView)
-            card.addView(bView)
-            root.addView(card)
-        }
+            btnRow.addView(skipBtn)
 
-        val btnRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            setPadding(0, dp(8), 0, 0)
-        }
-
-        val scroll = ScrollView(context).apply { addView(root) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setView(scroll)
-            .setCancelable(true)
-            .create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-
-        val lspBtn = TextView(context).apply {
-            text = "LSP Servers"
-            textSize = 12.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(palette.accentColor)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            setOnClickListener {
-                settings.onboardingCompleted = true
-                dialog.dismiss()
-                onOpenLspManager()
+            val spacer = View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
             }
-        }
-        btnRow.addView(lspBtn)
+            btnRow.addView(spacer)
 
-        val skipBtn = TextView(context).apply {
-            text = "Start Coding"
-            textSize = 12.5f
-            setTextColor(palette.subColor)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            setOnClickListener {
-                settings.onboardingCompleted = true
-                dialog.dismiss()
+            if (currentStep > 0) {
+                val backBtn = TextView(context).apply {
+                    text = "Back"
+                    textSize = 12.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(palette.fgColor)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        currentStep--
+                        renderStep()
+                    }
+                }
+                btnRow.addView(backBtn)
             }
-        }
-        btnRow.addView(skipBtn)
 
-        if (!UbuntuProotManager.isUbuntuInstalled(context)) {
-            val bootBtn = TextView(context).apply {
-                text = "Bootstrap Ubuntu"
+            if (currentStep == 1 && !UbuntuProotManager.isUbuntuInstalled(context)) {
+                val bootBtn = TextView(context).apply {
+                    text = "Bootstrap Ubuntu"
+                    textSize = 12.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(palette.accentColor)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        settings.onboardingCompleted = true
+                        sheetDialog.dismiss()
+                        onBootstrapNow()
+                    }
+                }
+                btnRow.addView(bootBtn)
+            }
+
+            if (currentStep == 2) {
+                val lspBtn = TextView(context).apply {
+                    text = "LSP Servers"
+                    textSize = 12.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(palette.accentColor)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        settings.onboardingCompleted = true
+                        sheetDialog.dismiss()
+                        onOpenLspManager()
+                    }
+                }
+                btnRow.addView(lspBtn)
+            }
+
+            val nextBtn = TextView(context).apply {
+                text = if (currentStep < 2) "Next →" else "Start Coding"
                 textSize = 12.5f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
-                setPadding(dp(14), dp(8), dp(14), dp(8))
+                setPadding(dp(16), dp(9), dp(16), dp(9))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dp(10).toFloat()
                     setColor(palette.accentColor)
                 }
                 setOnClickListener {
-                    settings.onboardingCompleted = true
-                    dialog.dismiss()
-                    onBootstrapNow()
+                    if (currentStep < 2) {
+                        currentStep++
+                        renderStep()
+                    } else {
+                        settings.onboardingCompleted = true
+                        sheetDialog.dismiss()
+                    }
                 }
             }
-            btnRow.addView(bootBtn)
+            btnRow.addView(nextBtn)
+
+            rootContainer.addView(btnRow)
         }
-        root.addView(btnRow)
-        dialog.show()
+
+        renderStep()
     }
 }

@@ -1,5 +1,8 @@
 package com.bfoxnet.pocketdev
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -10,24 +13,27 @@ import android.text.TextWatcher
 import android.view.Gravity
 import android.widget.ImageView
 import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.bfoxnet.pocketdev.databinding.ActivityLspBinding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
+import kotlin.math.roundToInt
 
 /**
- * Dedicated "Language Server Protocol" page with synchronized AppBar and StatusBar colors.
- *
- * Installing any Language Server (`lsp-install <server-id>`) also installs its corresponding
- * Alpine Linux language runtime/compiler packages (`spec.alpinePackages`) via `apk add`.
+ * Dedicated "Language Server Protocol" page with category filter pills (`All`, `Installed`, `Popular`),
+ * accurate binary installation states, and a themed Material 3 Bottom Sheet JSON-RPC inspector.
  */
 class LspActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLspBinding
     private lateinit var settings: Settings
     private var filterQuery: String = ""
+    private var activeFilterCategory: Int = FILTER_ALL
+    private val pendingInstallIds = HashSet<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +51,7 @@ class LspActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         LspManager.syncTerminalInstallations(this)
+        pendingInstallIds.removeAll { LspManager.isInstalled(this, it) }
         applyThemeChrome()
         updateSubtitle()
         renderServerList()
@@ -76,12 +83,28 @@ class LspActivity : AppCompatActivity() {
     private fun updateSubtitle() {
         val total = LspManager.AVAILABLE_SERVERS.size
         val installed = LspManager.AVAILABLE_SERVERS.count { LspManager.isInstalled(this, it.id) }
-        binding.toolbar.subtitle = "$installed of $total installed (includes language packages)"
+        binding.toolbar.subtitle = "$installed of $total installed (stdio JSON-RPC 2.0)"
     }
 
     private fun setupListeners() {
         binding.btnInstallPopular.setOnClickListener {
             launchTerminalCommand("lsp-install --popular")
+        }
+
+        binding.chipLspAll.setOnClickListener {
+            activeFilterCategory = FILTER_ALL
+            styleFilterChips()
+            renderServerList()
+        }
+        binding.chipLspInstalled.setOnClickListener {
+            activeFilterCategory = FILTER_INSTALLED
+            styleFilterChips()
+            renderServerList()
+        }
+        binding.chipLspPopular.setOnClickListener {
+            activeFilterCategory = FILTER_POPULAR
+            styleFilterChips()
+            renderServerList()
         }
 
         binding.lspFilterInput.addTextChangedListener(object : TextWatcher {
@@ -92,6 +115,33 @@ class LspActivity : AppCompatActivity() {
                 renderServerList()
             }
         })
+    }
+
+    private fun styleFilterChips() {
+        val theme = EditorController.themeById(settings.editorTheme)
+        val fg = Color.parseColor(theme.ui.fg)
+        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val density = resources.displayMetrics.density
+
+        val chips = listOf(
+            binding.chipLspAll to (activeFilterCategory == FILTER_ALL),
+            binding.chipLspInstalled to (activeFilterCategory == FILTER_INSTALLED),
+            binding.chipLspPopular to (activeFilterCategory == FILTER_POPULAR)
+        )
+        for ((chip, active) in chips) {
+            chip.setTextColor(if (active) accent else fg)
+            chip.setTypeface(chip.typeface, if (active) Typeface.BOLD else Typeface.NORMAL)
+            chip.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 14f * density
+                setColor(if (active) ModernUiHelper.withAlpha(accent, 0x22) else ModernUiHelper.withAlpha(subtle, 0x16))
+                setStroke(
+                    (1 * density).toInt().coerceAtLeast(1),
+                    if (active) ModernUiHelper.withAlpha(accent, 0x77) else ModernUiHelper.withAlpha(subtle, 0x33)
+                )
+            }
+        }
     }
 
     private fun launchTerminalCommand(cmd: String) {
@@ -118,6 +168,7 @@ class LspActivity : AppCompatActivity() {
         binding.lspScroll.setBackgroundColor(surface)
         binding.lspFilterInput.setTextColor(fg)
         binding.lspFilterInput.setHintTextColor(subtle)
+        styleFilterChips()
 
         window?.let { win ->
             win.statusBarColor = chrome
@@ -136,20 +187,42 @@ class LspActivity : AppCompatActivity() {
         val cardBg = Color.parseColor(theme.ui.chromeBg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
         val density = resources.displayMetrics.density
 
+        val popularIds = setOf("pyright", "typescript-language-server", "clangd", "gopls", "rust-analyzer", "kotlin-language-server")
+
         val servers = LspManager.AVAILABLE_SERVERS.filter { s ->
-            if (filterQuery.isEmpty()) true
+            val matchesCategory = when (activeFilterCategory) {
+                FILTER_INSTALLED -> LspManager.isInstalled(this, s.id)
+                FILTER_POPULAR -> s.id in popularIds
+                else -> true
+            }
+            val matchesQuery = if (filterQuery.isEmpty()) true
             else s.name.contains(filterQuery, ignoreCase = true) ||
                 s.id.contains(filterQuery, ignoreCase = true) ||
                 s.binaryName.contains(filterQuery, ignoreCase = true) ||
                 s.alpinePackages.any { it.contains(filterQuery, ignoreCase = true) } ||
                 s.extensions.any { it.contains(filterQuery.removePrefix("."), ignoreCase = true) }
+            matchesCategory && matchesQuery
+        }
+
+        if (servers.isEmpty()) {
+            val emptyTv = MaterialTextView(this).apply {
+                text = "No language servers match your current filter."
+                textSize = 13f
+                setTextColor(subtle)
+                gravity = Gravity.CENTER
+                setPadding(0, (32 * density).toInt(), 0, (32 * density).toInt())
+            }
+            container.addView(emptyTv)
+            return
         }
 
         for (server in servers) {
             val installed = LspManager.isInstalled(this, server.id)
             val enabled = LspManager.isEnabled(this, server.id)
+            val pending = pendingInstallIds.contains(server.id)
 
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -161,12 +234,12 @@ class LspActivity : AppCompatActivity() {
                 )
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 10 * density
+                    cornerRadius = 12 * density
                     setColor(cardBg)
-                    val borderColor = if (installed && enabled) {
-                        Color.parseColor("#4CAF50")
-                    } else {
-                        subtle and 0x44FFFFFF
+                    val borderColor = when {
+                        installed && enabled -> Color.parseColor("#4CAF50")
+                        pending -> accent
+                        else -> subtle and 0x44FFFFFF
                     }
                     setStroke((1 * density).toInt().coerceAtLeast(1), borderColor)
                 }
@@ -206,7 +279,7 @@ class LspActivity : AppCompatActivity() {
                 setTypeface(typeface, Typeface.BOLD)
             }
             val cmdView = MaterialTextView(this).apply {
-                text = "$ lsp-install ${server.id}  •  Packages: ${server.alpinePackages.joinToString(", ")}"
+                text = "Exts: ${server.extensions.joinToString(", ") { ".$it" }}  •  Packages: ${server.alpinePackages.joinToString(", ")}"
                 textSize = 10.5f
                 typeface = Typeface.MONOSPACE
                 setTextColor(subtle)
@@ -219,14 +292,17 @@ class LspActivity : AppCompatActivity() {
                 text = when {
                     installed && enabled -> "ACTIVE"
                     installed -> "PAUSED"
-                    else -> "NOT INSTALLED"
+                    pending -> "INSTALLING…"
+                    else -> "AVAILABLE"
                 }
                 textSize = 10f
                 typeface = Typeface.MONOSPACE
+                setTypeface(typeface, Typeface.BOLD)
                 setTextColor(
                     when {
                         installed && enabled -> Color.parseColor("#66BB6A")
                         installed -> Color.parseColor("#FFA726")
+                        pending -> accent
                         else -> subtle
                     }
                 )
@@ -255,12 +331,14 @@ class LspActivity : AppCompatActivity() {
                     null,
                     com.google.android.material.R.attr.materialButtonStyle
                 ).apply {
-                    text = "Install LSP + Language Package"
-                    textSize = 11f
-                    minHeight = (34 * density).toInt()
-                    minimumHeight = (34 * density).toInt()
+                    text = if (pending) "Resume Install in Terminal" else "Install LSP + Toolchain"
+                    textSize = 11.5f
+                    isAllCaps = false
+                    minHeight = (36 * density).toInt()
+                    minimumHeight = (36 * density).toInt()
                     setOnClickListener {
-                        LspManager.installServer(this@LspActivity, server.id)
+                        pendingInstallIds.add(server.id)
+                        renderServerList()
                         launchTerminalCommand("lsp-install ${server.id}")
                     }
                 }
@@ -272,9 +350,10 @@ class LspActivity : AppCompatActivity() {
                     com.google.android.material.R.attr.materialButtonOutlinedStyle
                 ).apply {
                     text = if (enabled) "Pause" else "Enable"
-                    textSize = 11f
-                    minHeight = (34 * density).toInt()
-                    minimumHeight = (34 * density).toInt()
+                    textSize = 11.5f
+                    isAllCaps = false
+                    minHeight = (36 * density).toInt()
+                    minimumHeight = (36 * density).toInt()
                     setOnClickListener {
                         LspManager.setServerEnabled(this@LspActivity, server.id, !enabled)
                         renderServerList()
@@ -288,9 +367,10 @@ class LspActivity : AppCompatActivity() {
                     com.google.android.material.R.attr.materialButtonOutlinedStyle
                 ).apply {
                     text = "JSON-RPC"
-                    textSize = 11f
-                    minHeight = (34 * density).toInt()
-                    minimumHeight = (34 * density).toInt()
+                    textSize = 11.5f
+                    isAllCaps = false
+                    minHeight = (36 * density).toInt()
+                    minimumHeight = (36 * density).toInt()
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -309,9 +389,10 @@ class LspActivity : AppCompatActivity() {
                     com.google.android.material.R.attr.materialButtonOutlinedStyle
                 ).apply {
                     text = "Uninstall"
-                    textSize = 11f
-                    minHeight = (34 * density).toInt()
-                    minimumHeight = (34 * density).toInt()
+                    textSize = 11.5f
+                    isAllCaps = false
+                    minHeight = (36 * density).toInt()
+                    minimumHeight = (36 * density).toInt()
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -331,6 +412,9 @@ class LspActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Themed Material 3 Bottom Sheet JSON-RPC 2.0 Exchange Inspector (replaces raw unstyled AlertDialog).
+     */
     private fun showJsonRpcDialog(server: LspManager.LspServerSpec) {
         val sampleDiags = LspManager.analyzeDocument(
             server,
@@ -338,10 +422,89 @@ class LspActivity : AppCompatActivity() {
             "funn test() {\n    idjdhdjd.ndndn()\n    runsisiiwiw bla bla\n}\n"
         )
         val payload = LspManager.buildJsonRpcSampleExchange(server, server.sampleFileName, sampleDiags)
-        AlertDialog.Builder(this)
-            .setTitle("${server.name} • JSON-RPC 2.0")
-            .setMessage(payload)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        val palette = ModernUiHelper.resolvePalette(this)
+        val density = resources.displayMetrics.density
+        fun dp(v: Int): Int = (v * density).roundToInt()
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(6), dp(18), dp(14))
+        }
+
+        val title = TextView(this).apply {
+            text = "${server.name} • JSON-RPC 2.0 Inspector"
+            textSize = 15.5f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            setTextColor(palette.fgColor)
+            setPadding(0, 0, 0, dp(8))
+        }
+        root.addView(title)
+
+        val codeView = TextView(this).apply {
+            text = payload
+            textSize = 11.5f
+            typeface = Typeface.MONOSPACE
+            setTextColor(palette.fgColor)
+            setTextIsSelectable(true)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(10).toFloat()
+                setColor(palette.inputBgColor)
+                setStroke(dp(1), palette.strokeColor)
+            }
+        }
+        val scroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(340)
+            )
+            addView(codeView)
+        }
+        root.addView(scroll)
+
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(this, root, palette)
+
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, 0)
+        }
+
+        val copyBtn = TextView(this).apply {
+            text = "Copy JSON-RPC"
+            textSize = 12.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(palette.accentColor)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            setOnClickListener {
+                val cb = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                cb?.setPrimaryClip(ClipData.newPlainText("JSON-RPC", payload))
+                Toast.makeText(this@LspActivity, "Copied JSON-RPC payload ✓", Toast.LENGTH_SHORT).show()
+            }
+        }
+        btnRow.addView(copyBtn)
+
+        val closeBtn = TextView(this).apply {
+            text = "Close"
+            textSize = 12.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(8).toFloat()
+                setColor(palette.accentColor)
+            }
+            setOnClickListener { sheetDialog.dismiss() }
+        }
+        btnRow.addView(closeBtn)
+        root.addView(btnRow)
+    }
+
+    companion object {
+        private const val FILTER_ALL = 0
+        private const val FILTER_INSTALLED = 1
+        private const val FILTER_POPULAR = 2
     }
 }

@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -15,13 +16,13 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.Gravity
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -38,11 +39,13 @@ import kotlin.math.roundToInt
  * GitHub & Git Integration layered over the `git` CLI inside the Ubuntu 24.04 PRoot environment
  * (with HTTPS REST/Zipball fallback when `git` is not yet installed):
  * - **OAuth Device Flow + Personal Access Token (PAT) Login** for private and public repositories.
- * - **Clone Repository Dialog** (browse user's GitHub repos or paste any URL/owner/repo, injects
+ * - **Clone Repository Bottom Sheet** (browse user's GitHub repos or paste any URL/owner/repo, injects
  *   token credentials seamlessly for private repos).
- * - **Commit, Push & Pull Dialogs** (`git add -A`, `git commit`, `git push`, `git pull --rebase`).
+ * - **Interactive Commit, Push & Pull Bottom Sheet** (selective per-file staging checkboxes, inline file diff
+ *   buttons, `git commit`, `git push`, `git pull --rebase`).
  * - **Branch Switcher & Creator** (`git branch`, `git checkout`, `git checkout -b`).
- * - **Colorized Diff Viewer** (`git diff HEAD` with green `+` additions, red `-` deletions, and `@@` hunks).
+ * - **Colorized Unified Diff Viewer Bottom Sheet** (`git diff HEAD` with line numbers, `+additions / -deletions`
+ *   counter badge, Copy Diff action, and clean single-frame Material 3 bottom sheet chrome).
  * - **Git-Status Badges in File Tree** (`M` Modified, `A` Added, `U` Untracked, `D` Deleted, `R` Renamed).
  */
 object GitHubManager {
@@ -222,8 +225,8 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 3,
-                title = "Commit & Push Changes",
-                subtitle = if (hasRepo) "Stage modified files, write commit message, and push to origin/$branch" else "Initialize git repo or clone a project first",
+                title = "Stage, Commit & Push Changes",
+                subtitle = if (hasRepo) "Select modified files, inspect diffs, commit, and push to origin/$branch" else "Initialize git repo or clone a project first",
                 iconRes = R.drawable.ic_save,
                 badgeText = if (hasRepo) branch else null,
                 action = {
@@ -276,7 +279,9 @@ object GitHubManager {
                                     title = if (res.isSuccess) "Git Pull Complete ✓" else "Git Pull Output",
                                     message = res.combinedOutput.ifBlank { "Already up to date." },
                                     confirmText = "OK",
-                                    cancelText = "Close"
+                                    cancelText = "Close",
+                                    iconRes = R.drawable.ic_git,
+                                    isDestructive = false
                                 ) {}
                             }
                         }.start()
@@ -340,18 +345,12 @@ object GitHubManager {
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(14))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(20).toFloat()
-                setColor(palette.bgColor)
-                setStroke(dp(1), palette.strokeColor)
-            }
+            setPadding(dp(20), dp(6), dp(20), dp(14))
         }
 
         val title = TextView(context).apply {
             text = "GitHub Authentication (OAuth / PAT)"
-            textSize = 16.5f
+            textSize = 16f
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
             setTextColor(palette.fgColor)
         }
@@ -446,10 +445,7 @@ object GitHubManager {
         root.addView(clientIdInput)
 
         val scroll = ScrollView(context).apply { addView(root) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setView(scroll)
-            .create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, scroll, palette)
 
         deviceFlowBtn.setOnClickListener {
             val customClient = clientIdInput.text?.toString()?.trim().orEmpty()
@@ -471,7 +467,7 @@ object GitHubManager {
                     settings.githubToken = token
                     settings.githubUsername = username
                     Toast.makeText(context, "Signed in to GitHub as @$username ✓", Toast.LENGTH_LONG).show()
-                    dialog.dismiss()
+                    sheetDialog.dismiss()
                     onUpdated()
                 },
                 onError = { errMsg ->
@@ -495,7 +491,7 @@ object GitHubManager {
                 setOnClickListener {
                     settings.githubToken = ""
                     settings.githubUsername = ""
-                    dialog.dismiss()
+                    sheetDialog.dismiss()
                     onUpdated()
                 }
             }
@@ -507,7 +503,7 @@ object GitHubManager {
             textSize = 12.5f
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setOnClickListener { dialog.dismiss() }
+            setOnClickListener { sheetDialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
 
@@ -536,7 +532,7 @@ object GitHubManager {
                             if (user != null) "Verified GitHub account @$user ✓" else "Saved GitHub token",
                             Toast.LENGTH_SHORT
                         ).show()
-                        dialog.dismiss()
+                        sheetDialog.dismiss()
                         onUpdated()
                     }
                 }.start()
@@ -544,7 +540,6 @@ object GitHubManager {
         }
         btnRow.addView(savePatBtn)
         root.addView(btnRow)
-        dialog.show()
     }
 
     private fun startOAuthDeviceFlow(
@@ -670,18 +665,12 @@ object GitHubManager {
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(14))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(20).toFloat()
-                setColor(palette.bgColor)
-                setStroke(dp(1), palette.strokeColor)
-            }
+            setPadding(dp(20), dp(6), dp(20), dp(14))
         }
 
         val title = TextView(context).apply {
             text = "Clone GitHub Repository"
-            textSize = 16.5f
+            textSize = 16f
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
             setTextColor(palette.fgColor)
         }
@@ -727,10 +716,7 @@ object GitHubManager {
         repoListContainer.addView(statusView)
 
         val scroll = ScrollView(context).apply { addView(root) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setView(scroll)
-            .create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, scroll, palette)
 
         if (settings.githubToken.isNotBlank()) {
             Thread {
@@ -742,7 +728,7 @@ object GitHubManager {
                         repoListContainer.addView(statusView)
                     } else {
                         val hdr = TextView(context).apply {
-                            text = "Your Recent Repositories (tap to fill):"
+                            text = "Your Recent Repositories (tap to select):"
                             textSize = 11.5f
                             typeface = Typeface.DEFAULT_BOLD
                             setTextColor(palette.accentColor)
@@ -755,7 +741,7 @@ object GitHubManager {
                                 text = "${repo.fullName}  [$badge]"
                                 textSize = 12.5f
                                 setTextColor(palette.fgColor)
-                                setPadding(dp(10), dp(8), dp(10), dp(8))
+                                setPadding(dp(10), dp(9), dp(10), dp(9))
                                 setOnClickListener {
                                     urlInput.setText(repo.cloneUrl)
                                 }
@@ -778,7 +764,7 @@ object GitHubManager {
             textSize = 12.5f
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setOnClickListener { dialog.dismiss() }
+            setOnClickListener { sheetDialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
 
@@ -805,7 +791,7 @@ object GitHubManager {
                     isEnabled = true
                     if (clonedDir != null) {
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        dialog.dismiss()
+                        sheetDialog.dismiss()
                         onProjectCloned(clonedDir)
                     } else {
                         statusView.text = "Clone error: $message"
@@ -816,7 +802,6 @@ object GitHubManager {
         }
         btnRow.addView(cloneBtn)
         root.addView(btnRow)
-        dialog.show()
     }
 
     private fun fetchUserRepos(token: String): List<RepoSummary> {
@@ -932,6 +917,9 @@ object GitHubManager {
         }.apply { isDaemon = true }.start()
     }
 
+    /**
+     * Interactive Commit & Push Bottom Sheet with per-file staging checkboxes and 1-tap file diff links.
+     */
     fun showCommitAndPushDialog(
         context: Context,
         projectDir: File,
@@ -943,19 +931,13 @@ object GitHubManager {
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(14))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(20).toFloat()
-                setColor(palette.bgColor)
-                setStroke(dp(1), palette.strokeColor)
-            }
+            setPadding(dp(20), dp(6), dp(20), dp(14))
         }
 
         val branch = getCurrentBranchFast(projectDir)
         val title = TextView(context).apply {
-            text = "Commit & Push • $branch"
-            textSize = 16.5f
+            text = "Stage, Commit & Push • $branch"
+            textSize = 16f
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
             setTextColor(palette.fgColor)
         }
@@ -964,11 +946,30 @@ object GitHubManager {
         val statusSummary = TextView(context).apply {
             text = "Inspecting modified files..."
             textSize = 11.5f
-            typeface = Typeface.MONOSPACE
             setTextColor(palette.subColor)
-            setPadding(0, dp(6), 0, dp(10))
+            setPadding(0, dp(4), 0, dp(8))
         }
         root.addView(statusSummary)
+
+        val stageFilesContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(10).toFloat()
+                setColor(palette.inputBgColor)
+                setStroke(dp(1), palette.strokeColor)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(10)
+            }
+        }
+        root.addView(stageFilesContainer)
+
+        val stagedRelPaths = LinkedHashSet<String>()
 
         val msgInput = EditText(context).apply {
             hint = "Commit message (e.g. feat: add LSP stdio & GitHub integration)"
@@ -986,17 +987,64 @@ object GitHubManager {
         root.addView(msgInput)
 
         Thread {
-            val st = runGitCommand(context, projectDir, "status -s")
+            val statusMap = computeGitStatusSync(context, projectDir)
             mainHandler.post {
-                statusSummary.text = st.stdout.trim().ifEmpty { "Working tree clean (no unstaged changes)." }
+                stageFilesContainer.removeAllViews()
+                if (statusMap.isEmpty()) {
+                    statusSummary.text = "✓ Working tree clean (no uncommitted changes)."
+                    val emptyTv = TextView(context).apply {
+                        text = "No modified or untracked files to stage."
+                        textSize = 12f
+                        setTextColor(palette.subColor)
+                    }
+                    stageFilesContainer.addView(emptyTv)
+                } else {
+                    statusSummary.text = "Select files to stage (${statusMap.size} changed):"
+                    for ((relPath, state) in statusMap.entries.sortedBy { it.key }) {
+                        stagedRelPaths.add(relPath)
+                        val row = LinearLayout(context).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                        }
+                        val cb = CheckBox(context).apply {
+                            text = "${state.badge}  $relPath"
+                            textSize = 12f
+                            typeface = Typeface.MONOSPACE
+                            setTextColor(palette.fgColor)
+                            buttonTintList = ColorStateList.valueOf(palette.accentColor)
+                            isChecked = true
+                            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                            setOnCheckedChangeListener { _, checked ->
+                                if (checked) stagedRelPaths.add(relPath) else stagedRelPaths.remove(relPath)
+                            }
+                        }
+                        row.addView(cb)
+
+                        val diffLink = TextView(context).apply {
+                            text = "Diff"
+                            textSize = 11f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(palette.accentColor)
+                            setPadding(dp(8), dp(4), dp(8), dp(4))
+                            setOnClickListener {
+                                showDiffViewerDialog(context, projectDir, File(projectDir, relPath))
+                            }
+                        }
+                        row.addView(diffLink)
+                        stageFilesContainer.addView(row)
+                    }
+                }
             }
         }.start()
 
         val scroll = ScrollView(context).apply { addView(root) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setView(scroll)
-            .create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, scroll, palette)
+
+        fun buildStageShellFragment(): String {
+            if (stagedRelPaths.isEmpty()) return "add -A"
+            val quotedFiles = stagedRelPaths.joinToString(" ") { shellSingleQuote(it) }
+            return "reset HEAD >/dev/null 2>&1 || true; git add -- $quotedFiles"
+        }
 
         val btnRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1009,7 +1057,7 @@ object GitHubManager {
             textSize = 12.5f
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setOnClickListener { dialog.dismiss() }
+            setOnClickListener { sheetDialog.dismiss() }
         }
         btnRow.addView(cancelBtn)
 
@@ -1025,13 +1073,14 @@ object GitHubManager {
                     Toast.makeText(context, "Enter a commit message", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
+                val stageCmd = buildStageShellFragment()
                 Thread {
-                    val res = runGitCommand(context, projectDir, "add -A && git commit -m ${shellSingleQuote(msg)}")
+                    val res = runGitCommand(context, projectDir, "$stageCmd && git commit -m ${shellSingleQuote(msg)}")
                     invalidateStatusCache()
                     mainHandler.post {
                         onTreeRefreshRequested()
                         Toast.makeText(context, res.combinedOutput.ifBlank { "Committed ✓" }, Toast.LENGTH_LONG).show()
-                        if (res.isSuccess) dialog.dismiss()
+                        if (res.isSuccess) sheetDialog.dismiss()
                     }
                 }.start()
             }
@@ -1055,12 +1104,13 @@ object GitHubManager {
                     Toast.makeText(context, "Enter a commit message", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                statusSummary.text = "Staging, committing, and pushing to origin/$branch..."
+                val stageCmd = buildStageShellFragment()
+                statusSummary.text = "Staging selected files, committing, and pushing to origin/$branch..."
                 Thread {
                     val res = runGitCommand(
                         context,
                         projectDir,
-                        "add -A && (git commit -m ${shellSingleQuote(msg)} || true) && git push -u origin $branch"
+                        "$stageCmd && (git commit -m ${shellSingleQuote(msg)} || true) && git push -u origin $branch"
                     )
                     invalidateStatusCache()
                     mainHandler.post {
@@ -1070,14 +1120,13 @@ object GitHubManager {
                             if (res.isSuccess) "Committed & pushed to origin/$branch ✓" else res.combinedOutput,
                             Toast.LENGTH_LONG
                         ).show()
-                        if (res.isSuccess) dialog.dismiss() else statusSummary.text = res.combinedOutput
+                        if (res.isSuccess) sheetDialog.dismiss() else statusSummary.text = res.combinedOutput
                     }
                 }.start()
             }
         }
         btnRow.addView(commitPushBtn)
         root.addView(btnRow)
-        dialog.show()
     }
 
     fun showBranchSwitcherDialog(
@@ -1105,6 +1154,7 @@ object GitHubManager {
                             subtitle = if (isCurrent) "Active checked-out branch" else "Tap to checkout `$b`",
                             iconRes = R.drawable.ic_git,
                             badgeText = if (isCurrent) "ACTIVE" else null,
+                            isSelected = isCurrent,
                             action = {
                                 val targetBranch = b.removePrefix("remotes/origin/")
                                 Thread {
@@ -1168,6 +1218,10 @@ object GitHubManager {
         }.start()
     }
 
+    /**
+     * Clean, single-frame Material 3 Bottom Sheet Diff Viewer with line numbers,
+     * `+additions / -deletions` summary pill, and 1-tap Copy Diff button.
+     */
     fun showDiffViewerDialog(
         context: Context,
         projectDir: File,
@@ -1190,6 +1244,13 @@ object GitHubManager {
                 }
             }
 
+            var addedLines = 0
+            var deletedLines = 0
+            rawDiff.lineSequence().forEach { l ->
+                if (l.startsWith("+") && !l.startsWith("+++")) addedLines++
+                if (l.startsWith("-") && !l.startsWith("---")) deletedLines++
+            }
+
             mainHandler.post {
                 val palette = ModernUiHelper.resolvePalette(context)
                 val density = context.resources.displayMetrics.density
@@ -1197,13 +1258,14 @@ object GitHubManager {
 
                 val root = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(18), dp(16), dp(18), dp(14))
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dp(20).toFloat()
-                        setColor(palette.bgColor)
-                        setStroke(dp(1), palette.strokeColor)
-                    }
+                    setPadding(dp(18), dp(4), dp(18), dp(14))
+                }
+
+                // Header Row: Title + Additions/Deletions Badge
+                val headerRow = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, 0, 0, dp(8))
                 }
 
                 val title = TextView(context).apply {
@@ -1211,14 +1273,32 @@ object GitHubManager {
                     textSize = 15.5f
                     typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
                     setTextColor(palette.fgColor)
-                    setPadding(0, 0, 0, dp(8))
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 }
-                root.addView(title)
+                headerRow.addView(title)
+
+                val statsBadge = TextView(context).apply {
+                    text = "+$addedLines  -$deletedLines"
+                    textSize = 11.5f
+                    typeface = Typeface.MONOSPACE
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(palette.accentColor)
+                    setPadding(dp(8), dp(3), dp(8), dp(3))
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(6).toFloat()
+                        setColor(ModernUiHelper.withAlpha(palette.accentColor, 0x20))
+                    }
+                }
+                headerRow.addView(statsBadge)
+                root.addView(headerRow)
 
                 val colored = SpannableStringBuilder()
+                var lineNo = 1
                 for (line in rawDiff.lineSequence()) {
                     val start = colored.length
-                    colored.append(line).append("\n")
+                    val numPrefix = String.format("%3d │ ", lineNo++)
+                    colored.append(numPrefix).append(line).append("\n")
                     val end = colored.length
                     val color = when {
                         line.startsWith("+++") || line.startsWith("---") -> Color.parseColor("#FFB74D")
@@ -1242,7 +1322,7 @@ object GitHubManager {
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = dp(10).toFloat()
-                        setColor(palette.cardColor)
+                        setColor(palette.inputBgColor)
                         setStroke(dp(1), palette.strokeColor)
                     }
                     addView(diffTextView)
@@ -1250,18 +1330,49 @@ object GitHubManager {
                 val vScroll = ScrollView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(360)
+                        dp(380)
                     )
                     addView(hScroll)
                 }
                 root.addView(vScroll)
 
-                val dialog = MaterialAlertDialogBuilder(context)
-                    .setView(root)
-                    .setPositiveButton("Close", null)
-                    .create()
-                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-                dialog.show()
+                val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, root, palette)
+
+                val btnRow = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(10), 0, 0)
+                }
+
+                val copyBtn = TextView(context).apply {
+                    text = "Copy Diff"
+                    textSize = 12.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(palette.accentColor)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        cb?.setPrimaryClip(ClipData.newPlainText("Git Diff", rawDiff))
+                        Toast.makeText(context, "Copied diff to clipboard ✓", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                btnRow.addView(copyBtn)
+
+                val closeBtn = TextView(context).apply {
+                    text = "Close"
+                    textSize = 12.5f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+                    setPadding(dp(16), dp(8), dp(16), dp(8))
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dp(8).toFloat()
+                        setColor(palette.accentColor)
+                    }
+                    setOnClickListener { sheetDialog.dismiss() }
+                }
+                btnRow.addView(closeBtn)
+                root.addView(btnRow)
             }
         }.start()
     }

@@ -15,7 +15,7 @@
         android:background="@color/chrome_background"
         android:orientation="vertical">
 
-        <!-- 1. Compact Two-Row AppBarLayout (MaterialToolbar + File TabLayout) -->
+        <!-- 1. Compact Two-Row AppBarLayout (MaterialToolbar with Project Context + File TabLayout) -->
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/editor_appbar"
             android:layout_width="match_parent"
@@ -24,29 +24,29 @@
             app:elevation="0dp"
             app:liftOnScroll="false">
 
-            <!-- Row 1: Compact MaterialToolbar ([☰] ... [Run ▶] [Search] [Save] [Terminal] [⋮]) -->
+            <!-- Row 1: Compact MaterialToolbar ([☰] [📁 Project ▾] ... [Run ▶] [Search] [Save] [Terminal] [⋮]) -->
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/editor_toolbar"
                 style="@style/AndroidIDE.Toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="42dp"
+                android:layout_height="46dp"
                 android:background="@color/chrome_background"
                 app:contentInsetStartWithNavigation="0dp"
                 app:menu="@menu/menu_editor"
                 app:navigationContentDescription="@string/project_explorer_title"
                 app:navigationIcon="@drawable/ic_menu"
-                app:title=""
+                app:title="PocketDev"
                 app:titleCentered="false" />
 
             <!-- Row 2: Dedicated Material 3 TabLayout Row Directly Underneath for Open Files -->
             <LinearLayout
                 android:id="@+id/file_tab_bar_row"
                 android:layout_width="match_parent"
-                android:layout_height="38dp"
+                android:layout_height="42dp"
                 android:background="@color/chrome_background"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingEnd="4dp">
+                android:paddingEnd="6dp">
 
                 <com.google.android.material.tabs.TabLayout
                     android:id="@+id/file_tab_layout"
@@ -60,11 +60,11 @@
                 <ImageButton
                     android:id="@+id/btn_new_tab"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:layout_marginStart="2dp"
                     android:contentDescription="@string/menu_new"
-                    android:padding="7dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_add" />
             </LinearLayout>
 
@@ -75,7 +75,7 @@
                 android:background="#26888888" />
         </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- 2. Find & Replace Bar (Hidden until requested) -->
+        <!-- 2. Collapsible Find & Replace Bar (Replace row collapsed by default to save vertical space) -->
         <LinearLayout
             android:id="@+id/find_bar"
             android:layout_width="match_parent"
@@ -83,7 +83,7 @@
             android:background="@color/chrome_background"
             android:orientation="vertical"
             android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
+            android:paddingVertical="5dp"
             android:visibility="gone">
 
             <LinearLayout
@@ -93,13 +93,13 @@
                 android:orientation="horizontal">
 
                 <ImageButton
-                    android:id="@+id/btn_search_close"
+                    android:id="@+id/btn_toggle_replace_row"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:contentDescription="@string/close_search"
-                    android:padding="6dp"
-                    android:src="@drawable/ic_close" />
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:contentDescription="Toggle Replace Row"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_chevron_down" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
@@ -129,63 +129,73 @@
                 <ImageButton
                     android:id="@+id/btn_search_case"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:contentDescription="@string/toggle_case_sensitive"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_text_fields" />
 
                 <ImageButton
                     android:id="@+id/btn_search_regex"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:contentDescription="@string/toggle_regex"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_regex" />
 
                 <ImageButton
                     android:id="@+id/btn_search_prev"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:contentDescription="@string/search_previous"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_arrow_up" />
 
                 <ImageButton
                     android:id="@+id/btn_search_next"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:contentDescription="@string/search_next"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_arrow_down" />
 
                 <ImageButton
                     android:id="@+id/btn_search_project_mode"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
                     android:contentDescription="@string/menu_project_search"
-                    android:padding="5dp"
-                    android:src="@drawable/ic_folder" />
+                    android:padding="6dp"
+                    android:src="@drawable/ic_folder_search" />
+
+                <ImageButton
+                    android:id="@+id/btn_search_close"
+                    style="@style/PocketDev.IconButton"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:contentDescription="@string/close_search"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_close" />
             </LinearLayout>
 
-            <!-- Replace Row -->
+            <!-- Collapsible Replace Row -->
             <LinearLayout
                 android:id="@+id/replace_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="34dp"
                     android:layout_weight="1">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -202,12 +212,12 @@
                     android:id="@+id/btn_replace_one"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="32dp"
+                    android:layout_height="34dp"
                     android:layout_marginStart="6dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
-                    android:paddingHorizontal="8dp"
+                    android:paddingHorizontal="10dp"
                     android:text="Replace"
                     android:textSize="11sp" />
 
@@ -215,12 +225,12 @@
                     android:id="@+id/btn_replace_all"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="32dp"
+                    android:layout_height="34dp"
                     android:layout_marginStart="4dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
-                    android:paddingHorizontal="8dp"
+                    android:paddingHorizontal="10dp"
                     android:text="All"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -230,7 +240,7 @@
         <LinearLayout
             android:id="@+id/sticky_scroll_bar"
             android:layout_width="match_parent"
-            android:layout_height="25dp"
+            android:layout_height="26dp"
             android:background="@color/chrome_background"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -263,13 +273,99 @@
                 tools:text="class MainActivity  ›  fun setupAppBar()" />
         </LinearLayout>
 
-        <!-- 3. Central CodeEditor (With native in-editor Sora auto-completion popup) -->
-        <io.github.rosemoe.sora.widget.CodeEditor
-            android:id="@+id/editor"
+        <!-- 3. Central CodeEditor + Empty State Viewport -->
+        <FrameLayout
+            android:id="@+id/editor_viewport_frame"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@color/editor_surface" />
+            android:layout_weight="1">
+
+            <io.github.rosemoe.sora.widget.CodeEditor
+                android:id="@+id/editor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/editor_surface" />
+
+            <!-- Professional Empty State when all editor tabs are closed -->
+            <LinearLayout
+                android:id="@+id/editor_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/editor_surface"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/empty_state_icon"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:alpha="0.85"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/ic_code" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/empty_state_title"
+                    style="@style/TextAppearance.Material3.TitleMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="No Open Editor Tabs"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/empty_state_subtitle"
+                    style="@style/TextAppearance.Material3.BodySmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="18dp"
+                    android:gravity="center"
+                    android:text="Create a new source file, open your project tree, or clone a GitHub repository." />
+
+                <LinearLayout
+                    android:layout_width="240dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_new_file"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="New File Tab"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_add" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_open_tree"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Open Project Explorer"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_folder_open" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_clone_repo"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="8dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Clone GitHub Repo"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_git" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
 
         <View
             android:id="@+id/bottom_divider"
@@ -277,11 +373,11 @@
             android:layout_height="1dp"
             android:background="#26888888" />
 
-        <!-- 4. Status Bar (Always visible, taps toggle/switch Bottom Sheet) -->
+        <!-- 4. Compact Status Bar (Always visible, taps toggle/switch Bottom Sheet) -->
         <LinearLayout
             android:id="@+id/status_bar"
             android:layout_width="match_parent"
-            android:layout_height="28dp"
+            android:layout_height="30dp"
             android:background="@color/chrome_background"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -333,17 +429,18 @@
             <LinearLayout
                 android:id="@+id/diagnostics_icon_group"
                 android:layout_width="wrap_content"
-                android:layout_height="26dp"
+                android:layout_height="28dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingHorizontal="2dp">
 
                 <ImageButton
                     android:id="@+id/btn_tab_diagnostics"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
                     android:contentDescription="@string/tab_code_analysis"
-                    android:padding="4dp"
+                    android:padding="5dp"
                     android:src="@drawable/ic_diagnostics" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -353,7 +450,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="3dp"
                     android:fontFamily="@font/jetbrains_mono"
-                    android:paddingHorizontal="4dp"
+                    android:paddingHorizontal="5dp"
                     android:text="0"
                     android:textColor="#FFFFFF"
                     android:textSize="9.5sp"
@@ -364,36 +461,36 @@
             <ImageButton
                 android:id="@+id/btn_tab_search_results"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:contentDescription="@string/tab_search_results"
-                android:padding="4dp"
+                android:padding="5dp"
                 android:src="@drawable/ic_search" />
 
             <ImageButton
                 android:id="@+id/btn_tab_build_output"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:contentDescription="@string/tab_build_output"
-                android:padding="4dp"
+                android:padding="5dp"
                 android:src="@drawable/ic_play" />
 
             <ImageButton
                 android:id="@+id/btn_toggle_bottom_panel"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:contentDescription="@string/menu_bottom_sheet"
-                android:padding="4dp"
+                android:padding="5dp"
                 android:src="@drawable/ic_chevron_up" />
         </LinearLayout>
 
-        <!-- 5. 3-Tab Bottom Sheet (Code Analysis, Search Results & Build Output) -->
+        <!-- 5. Draggable 3-Tab Bottom Sheet (Code Analysis, Search Results & Build Output with stdin) -->
         <LinearLayout
             android:id="@+id/bottom_panel_container"
             android:layout_width="match_parent"
-            android:layout_height="185dp"
+            android:layout_height="200dp"
             android:background="@color/surface_container"
             android:orientation="vertical"
             android:visibility="gone">
@@ -402,6 +499,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#26888888" />
+
+            <!-- Touch Drag Handle Area for smooth vertical panel resizing -->
+            <LinearLayout
+                android:id="@+id/bottom_sheet_drag_handle_area"
+                android:layout_width="match_parent"
+                android:layout_height="14dp"
+                android:background="@color/chrome_background"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/bottom_sheet_drag_pill"
+                    android:layout_width="36dp"
+                    android:layout_height="4dp"
+                    android:background="#55888888" />
+            </LinearLayout>
 
             <!-- Bottom Sheet TabLayout Header -->
             <LinearLayout
@@ -423,30 +536,40 @@
                     android:contentDescription="Bottom Sheet Sections" />
 
                 <ImageButton
+                    android:id="@+id/btn_bottom_sheet_stop"
+                    style="@style/PocketDev.IconButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:contentDescription="Stop Running Build"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_stop"
+                    android:visibility="gone" />
+
+                <ImageButton
                     android:id="@+id/btn_bottom_sheet_clear"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:contentDescription="Clear Output"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_clear_all" />
 
                 <ImageButton
                     android:id="@+id/btn_bottom_sheet_expand"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:contentDescription="Expand / Restore Bottom Sheet"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_expand" />
 
                 <ImageButton
                     android:id="@+id/btn_bottom_sheet_close"
                     style="@style/PocketDev.IconButton"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:contentDescription="Collapse Bottom Sheet"
-                    android:padding="5dp"
+                    android:padding="6dp"
                     android:src="@drawable/ic_chevron_down" />
             </LinearLayout>
 
@@ -492,53 +615,135 @@
                         android:paddingVertical="4dp" />
                 </ScrollView>
 
-                <!-- Tab 2: Build Output (Compile / Run Streaming Output) -->
-                <ScrollView
-                    android:id="@+id/build_output_scroll"
+                <!-- Tab 2: Build Output (Compile / Run Streaming Output + Interactive stdin bar) -->
+                <LinearLayout
+                    android:id="@+id/build_output_panel"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
+                    android:orientation="vertical"
                     android:visibility="gone">
 
-                    <LinearLayout
-                        android:id="@+id/build_output_container"
+                    <ScrollView
+                        android:id="@+id/build_output_scroll"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="6dp" />
-                </ScrollView>
+                        android:layout_height="0dp"
+                        android:layout_weight="1">
+
+                        <LinearLayout
+                            android:id="@+id/build_output_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="6dp" />
+                    </ScrollView>
+
+                    <!-- Interactive stdin input bar for running CLI programs -->
+                    <LinearLayout
+                        android:id="@+id/build_stdin_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="36dp"
+                        android:background="@color/chrome_background"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="8dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:fontFamily="@font/jetbrains_mono"
+                            android:text="stdin ›"
+                            android:textColor="#FFB74D"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <EditText
+                            android:id="@+id/build_stdin_input"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@android:color/transparent"
+                            android:fontFamily="@font/jetbrains_mono"
+                            android:hint="Send input line to running process…"
+                            android:imeOptions="actionSend"
+                            android:inputType="text"
+                            android:singleLine="true"
+                            android:textSize="12sp" />
+
+                        <ImageButton
+                            android:id="@+id/btn_build_stdin_send"
+                            style="@style/PocketDev.IconButton"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:contentDescription="Send stdin"
+                            android:padding="6dp"
+                            android:src="@drawable/ic_send" />
+                    </LinearLayout>
+                </LinearLayout>
             </FrameLayout>
         </LinearLayout>
 
-        <!-- 6. Symbol Input Bar (Always visible above keyboard) -->
-        <io.github.rosemoe.sora.widget.SymbolInputView
-            android:id="@+id/symbol_input"
+        <!-- 6. Merged Single-Row Keyboard Accessory Bar ([SYM / EDIT] Mode Switcher + Active Strip, auto-hides when IME is closed) -->
+        <LinearLayout
+            android:id="@+id/keyboard_dock_container"
             android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:background="@color/symbol_bar" />
+            android:layout_height="40dp"
+            android:background="@color/symbol_bar"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- 7. Icon-Only Quick Action Bar Directly Under Symbol Input Bar -->
-        <HorizontalScrollView
-            android:id="@+id/quick_action_bar"
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:background="@color/chrome_background"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:id="@+id/quick_action_container"
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/btn_toggle_dock_mode"
                 android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="4dp"
+                android:fontFamily="@font/jetbrains_mono"
+                android:gravity="center"
+                android:paddingHorizontal="8dp"
+                android:text="SYM ⇄"
+                android:textColor="#FFB74D"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <FrameLayout
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="6dp" />
-        </HorizontalScrollView>
+                android:layout_weight="1">
+
+                <!-- Mode 0: Symbol Input Bar -->
+                <io.github.rosemoe.sora.widget.SymbolInputView
+                    android:id="@+id/symbol_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/symbol_bar" />
+
+                <!-- Mode 1: Focused Edit Quick Action Bar (De-duplicated from Top Toolbar) -->
+                <HorizontalScrollView
+                    android:id="@+id/quick_action_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@color/chrome_background"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/quick_action_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="6dp" />
+                </HorizontalScrollView>
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Start Navigation Drawer: File Tree -->
+    <!-- Start Navigation Drawer: Unified Project Explorer, Git Source Control & Document Outline -->
     <LinearLayout
         android:id="@+id/project_sidebar"
-        android:layout_width="304dp"
+        android:layout_width="312dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/chrome_background"
@@ -547,20 +752,23 @@
         android:focusable="true"
         android:orientation="vertical">
 
-        <!-- File Tree Drawer Header -->
+        <!-- Tappable Project Switcher Drawer Header -->
         <LinearLayout
             android:id="@+id/sidebar_header"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="54dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingHorizontal="12dp">
 
             <LinearLayout
+                android:id="@+id/sidebar_project_selector"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical">
+                android:background="?attr/selectableItemBackground"
+                android:orientation="vertical"
+                android:paddingVertical="4dp">
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/project_title_text"
@@ -580,45 +788,46 @@
                     android:ellipsize="end"
                     android:fontFamily="@font/jetbrains_mono"
                     android:singleLine="true"
-                    android:text="Local Workspace"
+                    android:text="Tap to switch or import project ▾"
                     android:textColor="@color/on_surface_variant"
-                    android:textSize="10sp" />
+                    android:textSize="10.5sp" />
             </LinearLayout>
 
             <ImageButton
                 android:id="@+id/btn_select_project_folder"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:contentDescription="Open Project Folder (SAF)"
-                android:padding="5dp"
-                android:src="@drawable/ic_folder" />
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="Switch or Import Project"
+                android:padding="6dp"
+                android:src="@drawable/ic_folder_open" />
 
             <ImageButton
                 android:id="@+id/btn_local_workspace"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:contentDescription="Switch to Local Workspace"
-                android:padding="5dp"
-                android:src="@drawable/ic_terminal" />
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="Default Workspace"
+                android:padding="6dp"
+                android:src="@drawable/ic_terminal"
+                android:visibility="gone" />
 
             <ImageButton
                 android:id="@+id/btn_tree_new_file"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:contentDescription="New File or Folder"
-                android:padding="5dp"
+                android:padding="6dp"
                 android:src="@drawable/ic_add" />
 
             <ImageButton
                 android:id="@+id/btn_tree_refresh"
                 style="@style/PocketDev.IconButton"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:contentDescription="Refresh File Tree"
-                android:padding="5dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="Refresh Drawer"
+                android:padding="6dp"
                 android:src="@drawable/ic_refresh" />
         </LinearLayout>
 
@@ -627,37 +836,95 @@
             android:layout_height="1dp"
             android:background="#26888888" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/tree_filter_input"
+        <!-- 3-Tab Sidebar Mode Switcher: [Files] [Git] [Outline] -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/sidebar_mode_tabs"
+            style="@style/AndroidIDE.BottomSheetTabLayout"
             android:layout_width="match_parent"
             android:layout_height="36dp"
-            android:layout_marginHorizontal="10dp"
-            android:layout_marginVertical="4dp"
-            android:background="@android:color/transparent"
-            android:hint="@string/filter_files_hint"
-            android:inputType="text"
-            android:paddingHorizontal="6dp"
-            android:singleLine="true"
-            android:textSize="12sp" />
+            android:background="@color/chrome_background"
+            app:tabGravity="fill"
+            app:tabMode="fixed" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="#18888888" />
 
-        <ScrollView
+        <!-- Page 0: File Tree Explorer -->
+        <LinearLayout
+            android:id="@+id/sidebar_files_page"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:fillViewport="true">
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/tree_filter_input"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginHorizontal="10dp"
+                android:layout_marginVertical="4dp"
+                android:background="@android:color/transparent"
+                android:hint="@string/filter_files_hint"
+                android:inputType="text"
+                android:paddingHorizontal="6dp"
+                android:singleLine="true"
+                android:textSize="12sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#18888888" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/file_tree_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="16dp" />
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- Page 1: Inline Source Control (Git) Panel -->
+        <ScrollView
+            android:id="@+id/sidebar_git_page"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:visibility="gone">
 
             <LinearLayout
-                android:id="@+id/file_tree_container"
+                android:id="@+id/sidebar_git_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="4dp"
-                android:paddingBottom="16dp" />
+                android:padding="12dp" />
+        </ScrollView>
+
+        <!-- Page 2: Document Symbols (Outline) Panel -->
+        <ScrollView
+            android:id="@+id/sidebar_outline_page"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/sidebar_outline_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingVertical="6dp" />
         </ScrollView>
     </LinearLayout>
 </androidx.drawerlayout.widget.DrawerLayout>

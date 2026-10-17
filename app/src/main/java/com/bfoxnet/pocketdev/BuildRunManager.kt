@@ -13,7 +13,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -25,7 +24,8 @@ import kotlin.math.roundToInt
  *   `cargo run`, `gcc`/`g++`, `php`, `ruby`, `bash`/`zsh`, `lua`, `rustc`) for the active file or project.
  * - Streams real-time stdout/stderr line-by-line into the **Build Output** tab via `ProcessBuilder`
  *   layered over the Ubuntu 24.04 PRoot environment (or host shell fallback).
- * - Provides a per-language **Run Configuration Dialog** allowing custom command templates, CLI
+ * - Supports interactive `stdin` forwarding ([sendStdinToCurrentBuild]) and instant process cancellation ([stopCurrentBuild]).
+ * - Provides a per-language **Run Configuration Bottom Sheet** allowing custom command templates, CLI
  *   arguments, environment variables, and "Also run in interactive terminal" toggle.
  * - Provides **Format Document** (`clang-format`, `prettier`, `gofmt`, `black`/`autopep8`, `rustfmt`,
  *   `shfmt` inside PRoot, with an instant built-in structural indentation/brace formatter fallback).
@@ -49,6 +49,27 @@ object BuildRunManager {
     fun stopCurrentBuild() {
         runCatching { activeProcess?.destroyForcibly() }
         activeProcess = null
+    }
+
+    /**
+     * Sends a line of standard input (`stdin`) to the currently running build/run process.
+     * Returns true if a running process accepted the input.
+     */
+    fun sendStdinToCurrentBuild(inputLine: String): Boolean {
+        val proc = activeProcess ?: return false
+        if (!proc.isAlive) return false
+        return try {
+            val payload = (inputLine + "\n").toByteArray(Charsets.UTF_8)
+            Thread {
+                runCatching {
+                    proc.outputStream.write(payload)
+                    proc.outputStream.flush()
+                }
+            }.apply { isDaemon = true }.start()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun defaultRunConfigForFile(fileName: String): RunConfig {
@@ -269,18 +290,12 @@ object BuildRunManager {
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(14))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(20).toFloat()
-                setColor(palette.bgColor)
-                setStroke(dp(1), palette.strokeColor)
-            }
+            setPadding(dp(20), dp(6), dp(20), dp(14))
         }
 
         val titleView = TextView(context).apply {
             text = "Run Configuration • ${current.displayName}"
-            textSize = 16.5f
+            textSize = 16f
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
             setTextColor(palette.fgColor)
         }
@@ -290,7 +305,7 @@ object BuildRunManager {
             text = "Placeholders: \$FILE (active file), \$BASENAME (no ext), \$DIR (project dir), \$ARGS (CLI args)"
             textSize = 11.5f
             setTextColor(palette.subColor)
-            setPadding(0, dp(4), 0, dp(12))
+            setPadding(0, dp(4), 0, dp(10))
         }
         root.addView(subView)
 
@@ -356,10 +371,7 @@ object BuildRunManager {
         }
 
         val scroll = ScrollView(context).apply { addView(root) }
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setView(scroll)
-            .create()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, scroll, palette)
 
         val resetBtn = TextView(context).apply {
             text = "Reset Default"
@@ -391,7 +403,7 @@ object BuildRunManager {
                     runInTerminal = terminalCheck.isChecked
                 )
                 saveRunConfig(context, updated)
-                dialog.dismiss()
+                sheetDialog.dismiss()
                 Toast.makeText(context, "Saved Run Configuration for ${updated.displayName}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -416,14 +428,12 @@ object BuildRunManager {
                     runInTerminal = terminalCheck.isChecked
                 )
                 saveRunConfig(context, updated)
-                dialog.dismiss()
+                sheetDialog.dismiss()
                 onSaveAndRun(updated)
             }
         }
         btnRow.addView(runBtn)
         root.addView(btnRow)
-
-        dialog.show()
     }
 
     fun formatDocumentAsync(

@@ -20,7 +20,7 @@
             android:id="@+id/toolbar"
             style="@style/AndroidIDE.Toolbar"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="46dp"
             android:background="@color/chrome_background"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="@string/about_title" />
@@ -44,11 +44,11 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="22dp">
 
             <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
                 android:contentDescription="@string/app_name"
                 android:src="@mipmap/ic_launcher" />
 
@@ -63,68 +63,86 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/about_version"
-                style="@style/TextAppearance.Material3.BodyMedium"
+                style="@style/TextAppearance.Material3.BodySmall"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:fontFamily="@font/jetbrains_mono"
                 android:text="@string/about_version_text" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/about_description"
-                style="@style/TextAppearance.Material3.BodyLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:text="@string/about_subtitle" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/about_features_text"
                 style="@style/TextAppearance.Material3.BodyMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:lineSpacingExtra="4dp"
-                android:text="@string/about_features_body" />
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:text="@string/about_subtitle" />
 
+            <!-- Structured System & Architecture Summary Card -->
             <LinearLayout
+                android:id="@+id/about_runtime_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:layout_marginTop="18dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_open_lsp"
-                    style="@style/Widget.Material3.Button.TonalButton"
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/about_runtime_header"
+                    style="@style/TextAppearance.Material3.LabelMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:text="RUNTIME &amp; ARCHITECTURE"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/about_runtime_details"
+                    style="@style/TextAppearance.Material3.BodySmall"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/menu_lsp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_open_terminal"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/menu_terminal" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_open_diag"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/menu_diag" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_open_settings"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/settings_title" />
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:lineSpacingExtra="4dp"
+                    android:text="Ubuntu 24.04.5 LTS (Noble) • Native PRoot • Sora Editor 0.23.6" />
             </LinearLayout>
+
+            <!-- Core Capabilities Card -->
+            <LinearLayout
+                android:id="@+id/about_features_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/about_features_header"
+                    style="@style/TextAppearance.Material3.LabelMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/jetbrains_mono"
+                    android:text="CORE IDE CAPABILITIES"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/about_features_text"
+                    style="@style/TextAppearance.Material3.BodyMedium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"
+                    android:text="@string/about_features_body" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_open_diag"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="18dp"
+                android:text="Open System &amp; Grammar Diagnostics" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
