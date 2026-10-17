@@ -16,13 +16,10 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.annotation.DrawableRes
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 
@@ -30,12 +27,8 @@ import com.google.android.material.textview.MaterialTextView
  * Modern Material 3 Bottom Sheet, Context Menu, Action Sheet, Confirmation Dialog, Input Dialog,
  * and Choice Picker UI builder.
  *
- * Upgraded UX Architecture:
- * - Context menus, single-choice pickers, and custom workflow panels use Material 3 [BottomSheetDialog]
- *   with a top drag-handle pill, rounded 22dp top corners, expanded state by default, and thumb-friendly
- *   46dp+ touch targets for effortless one-handed mobile ergonomics.
- * - Uses the lightly orange App UI primary palette (`#FFB74D` in dark mode, `#E66000` in light mode)
- *   while keeping Sora Editor syntax colors independent.
+ * Uses bottom-anchored `Dialog` windows (`Gravity.BOTTOM`) with a top handle pill, rounded 22dp
+ * corners, and 46dp+ touch targets—avoiding `CoordinatorLayout` / `BottomSheetBehavior` scroll conflicts.
  */
 object ModernUiHelper {
 
@@ -106,34 +99,32 @@ object ModernUiHelper {
     }
 
     /**
-     * Wraps any custom [contentView] inside a themed Material 3 [BottomSheetDialog] with a top drag pill,
-     * rounded 22dp top corners, and automatic expanded state so modals never have double borders or
-     * awkward floating clipping on smaller screens.
+     * Wraps any custom [contentView] inside a bottom-anchored Material 3 sheet [Dialog] with a top
+     * handle pill and rounded 22dp corners.
      */
     fun showModernCustomBottomSheet(
         context: Context,
         contentView: View,
         palette: Palette = resolvePalette(context),
         cancelable: Boolean = true
-    ): BottomSheetDialog {
+    ): Dialog {
         val density = context.resources.displayMetrics.density
-        val sheetDialog = BottomSheetDialog(context)
-        sheetDialog.setCancelable(cancelable)
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setCancelable(cancelable)
 
         val wrapper = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(0, (10 * density).toInt(), 0, (12 * density).toInt())
-            val r = 22f * density
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                cornerRadius = 22f * density
                 setColor(palette.cardBg)
                 setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
             }
         }
 
-        // Top drag handle pill
         val dragPill = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -156,14 +147,10 @@ object ModernUiHelper {
             )
         )
 
-        sheetDialog.setContentView(wrapper)
-        sheetDialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
-        sheetDialog.behavior.apply {
-            skipCollapsed = true
-            state = BottomSheetBehavior.STATE_EXPANDED
-        }
-        sheetDialog.show()
-        return sheetDialog
+        dialog.setContentView(wrapper)
+        configureBottomSheetWindow(dialog, context, maxWidthDp = 460)
+        dialog.show()
+        return dialog
     }
 
     /**
@@ -242,14 +229,6 @@ object ModernUiHelper {
         headerRow.addView(titleView)
         rootCard.addView(headerRow)
 
-        val messageScroll = ScrollView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                weight = 1f
-            }
-        }
         val messageView = MaterialTextView(context).apply {
             text = message
             textSize = 13f
@@ -258,8 +237,7 @@ object ModernUiHelper {
             setPadding(0, (12 * density).toInt(), 0, (16 * density).toInt())
             setTextIsSelectable(true)
         }
-        messageScroll.addView(messageView)
-        rootCard.addView(messageScroll)
+        rootCard.addView(messageView)
 
         val btnRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -313,7 +291,7 @@ object ModernUiHelper {
     }
 
     /**
-     * Displays a sleek Material 3 BottomSheet action menu with a drag handle pill, optional header icon,
+     * Displays a sleek bottom-anchored Material 3 action menu with a handle pill, optional header icon,
      * subtitle, accessible 46dp+ touch rows, vector icons, and destructive item styling.
      */
     fun showModernContextMenu(
@@ -325,22 +303,21 @@ object ModernUiHelper {
         options: List<MenuOption>
     ) {
         val density = context.resources.displayMetrics.density
-        val sheetDialog = BottomSheetDialog(context)
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
 
         val rootCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(0, (10 * density).toInt(), 0, (14 * density).toInt())
-            val r = 22f * density
+            setPadding(0, (10 * density).toInt(), 0, (12 * density).toInt())
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                cornerRadius = 22f * density
                 setColor(palette.cardBg)
                 setStroke((1 * density).toInt().coerceAtLeast(1), palette.borderColor)
             }
         }
 
-        // Top drag handle pill
         val dragPill = View(context).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -488,7 +465,7 @@ object ModernUiHelper {
                     bottomMargin = (2 * density).toInt()
                 }
                 setOnClickListener {
-                    sheetDialog.dismiss()
+                    dialog.dismiss()
                     opt.action()
                 }
             }
@@ -575,17 +552,13 @@ object ModernUiHelper {
         scroll.addView(listContainer)
         rootCard.addView(scroll)
 
-        sheetDialog.setContentView(rootCard)
-        sheetDialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.setBackgroundColor(Color.TRANSPARENT)
-        sheetDialog.behavior.apply {
-            skipCollapsed = true
-            state = BottomSheetBehavior.STATE_EXPANDED
-        }
-        sheetDialog.show()
+        dialog.setContentView(rootCard)
+        configureBottomSheetWindow(dialog, context, maxWidthDp = 420)
+        dialog.show()
     }
 
     /**
-     * Shows a modern single-choice picker bottom sheet with a check indicator on the active item.
+     * Shows a modern single-choice picker sheet with a check indicator on the active item.
      */
     fun showModernSingleChoiceDialog(
         context: Context,
@@ -809,6 +782,22 @@ object ModernUiHelper {
         configureDialogWindow(dialog, context, maxWidthDp = 360, showKeyboard = true)
         dialog.show()
         input.requestFocus()
+    }
+
+    private fun configureBottomSheetWindow(
+        dialog: Dialog,
+        context: Context,
+        maxWidthDp: Int
+    ) {
+        val win = dialog.window ?: return
+        win.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        val dm = context.resources.displayMetrics
+        val targetWidth = minOf((dm.widthPixels * 0.96f).toInt(), (maxWidthDp * dm.density).toInt())
+        win.setLayout(targetWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+        win.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+        win.attributes = win.attributes?.apply {
+            y = (10 * dm.density).toInt()
+        }
     }
 
     private fun configureDialogWindow(

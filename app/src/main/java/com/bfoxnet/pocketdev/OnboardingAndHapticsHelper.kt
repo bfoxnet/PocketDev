@@ -1,5 +1,6 @@
 package com.bfoxnet.pocketdev
 
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -72,17 +73,11 @@ object OnboardingAndHapticsHelper {
         fun dp(v: Int): Int = (v * density).roundToInt()
 
         var currentStep = 0
+        var sheetDialog: Dialog? = null
         val rootContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(6), dp(20), dp(14))
         }
-
-        val scroll = ScrollView(context).apply { addView(rootContainer) }
-        val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(
-            context = context,
-            contentView = scroll,
-            palette = ModernUiHelper.resolvePalette(context)
-        )
 
         fun renderStep() {
             rootContainer.removeAllViews()
@@ -302,7 +297,7 @@ object OnboardingAndHapticsHelper {
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 setOnClickListener {
                     settings.onboardingCompleted = true
-                    sheetDialog.dismiss()
+                    sheetDialog?.dismiss()
                 }
             }
             btnRow.addView(skipBtn)
@@ -336,7 +331,7 @@ object OnboardingAndHapticsHelper {
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
                         settings.onboardingCompleted = true
-                        sheetDialog.dismiss()
+                        sheetDialog?.dismiss()
                         onBootstrapNow()
                     }
                 }
@@ -352,7 +347,7 @@ object OnboardingAndHapticsHelper {
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
                         settings.onboardingCompleted = true
-                        sheetDialog.dismiss()
+                        sheetDialog?.dismiss()
                         onOpenLspManager()
                     }
                 }
@@ -376,7 +371,7 @@ object OnboardingAndHapticsHelper {
                         renderStep()
                     } else {
                         settings.onboardingCompleted = true
-                        sheetDialog.dismiss()
+                        sheetDialog?.dismiss()
                     }
                 }
             }
@@ -386,5 +381,11 @@ object OnboardingAndHapticsHelper {
         }
 
         renderStep()
+        val scroll = ScrollView(context).apply { addView(rootContainer) }
+        sheetDialog = ModernUiHelper.showModernCustomBottomSheet(
+            context = context,
+            contentView = scroll,
+            palette = ModernUiHelper.resolvePalette(context)
+        )
     }
 }

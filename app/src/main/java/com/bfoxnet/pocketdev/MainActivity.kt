@@ -8,7 +8,6 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.FileObserver
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -48,14 +47,14 @@ import kotlin.math.roundToInt
 /**
  * Main Editor Activity:
  * - Compact two-row `AppBarLayout` (`@+id/editor_appbar`):
- *   1. Material 3 `MaterialToolbar` (`@+id/editor_toolbar`) displaying the active project chip (`📁 project ▾`)
+ *   1. Material 3 `MaterialToolbar` (`@+id/editor_toolbar`) displaying the active project chip (`project ▾`)
  *      and branch subtitle, plus `[Run ▶] [Search] [Save] [Terminal] [⋮]`.
  *   2. Dedicated Material 3 `TabLayout` (`@+id/file_tab_layout`) row directly underneath for open files,
  *      with an Empty State screen (`@+id/editor_empty_state`) when all tabs are closed.
  * - Touch-Draggable 3-Tab Bottom Sheet (`@+id/bottom_panel_container`):
  *   `0 = Code Analysis`, `1 = Search Results`, `2 = Build Output` (with live `■ Stop` button and `stdin` bar).
  * - Single-row Merged Keyboard Accessory Dock (`@+id/keyboard_dock_container`) switching between
- *   `SymbolInputView` (`SYM`) and de-duplicated Edit tools (`EDIT`), auto-hiding when the soft keyboard closes.
+ *   `SymbolInputView` (`SYM`) and de-duplicated Edit tools (`EDIT`).
  * - 3-Tab Project Sidebar Drawer (`@+id/project_sidebar`):
  *   `0 = Files` (Explorer with indent guides), `1 = Git` (Inline Source Control), `2 = Outline` (Document Symbols).
  */
@@ -75,13 +74,25 @@ class MainActivity : AppCompatActivity() {
     private val expandedFolderKeys = HashSet<String>()
     private var treeFilterQuery: String = ""
     private var activeSidebarTab: Int = SIDEBAR_TAB_FILES
-    private var projectFileObserver: FileObserver? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var suppressSidebarTabCallback: Boolean = false
+    private var lastTreeSignature: Long = 0L
+    private val treeWatcherHandler = Handler(Looper.getMainLooper())
+    private val treeWatcherRunnable = object : Runnable {
+        override fun run() {
+            if (binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START) && activeSidebarTab == SIDEBAR_TAB_FILES) {
+                val currentSig = ProjectManager.computeTreeSignature(this@MainActivity)
+                if (currentSig != lastTreeSignature) {
+                    lastTreeSignature = currentSig
+                    refreshFileTree()
+                }
+                treeWatcherHandler.postDelayed(this, 2000L)
+            }
+        }
+    }
 
-    // Keyboard dock state (SYM vs EDIT, and IME visibility)
+    // Keyboard dock state (SYM vs EDIT)
     private var isEditDockMode: Boolean = false
-    private var isImeVisible: Boolean = false
-    private var dockPinnedOpen: Boolean = false
+    private var dockHiddenManually: Boolean = false
 
     // Auto-Save debounce handler
     private val autoSaveHandler = Handler(Looper.getMainLooper())
@@ -201,28 +212,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
         refreshFileTree()
-        observeActiveProjectDirectory()
 
         if (!settings.onboardingCompleted) {
             binding.editor.postDelayed({
                 if (!isFinishing && !settings.onboardingCompleted) {
-                    OnboardingAndHapticsHelper.showOnboardingDialog(
-                        context = this,
-                        onBootstrapNow = {
-                            openTerminalInDirectory(
-                                targetDir = ProjectManager.ensureDefaultLocalWorkspace(this),
-                                autorunCommand = "ubuntu-bootstrap"
-                            )
-                        },
-                        onOpenLspManager = {
-                            startActivity(Intent(this, LspActivity::class.java))
-                        },
-                        onThemeChanged = {
-                            editorController.applyEditorTheme(settings.editorTheme)
-                            editorController.applyFontSettings()
-                            applyThemeChrome()
-                        }
-                    )
+                    runCatching {
+                        OnboardingAndHapticsHelper.showOnboardingDialog(
+                            context = this,
+                            onBootstrapNow = {
+                                openTerminalInDirectory(
+                                    targetDir = ProjectManager.ensureDefaultLocalWorkspace(this),
+                                    autorunCommand = "ubuntu-bootstrap"
+                                )
+                            },
+                            onOpenLspManager = {
+                                startActivity(Intent(this, LspActivity::class.java))
+                            },
+                            onThemeChanged = {
+                                editorController.applyEditorTheme(settings.editorTheme)
+                                editorController.applyFontSettings()
+                                applyThemeChrome()
+                            }
+                        )
+                    }
                 }
             }, 350L)
         }
@@ -277,11 +289,6 @@ class MainActivity : AppCompatActivity() {
                     WindowInsetsCompat.Type.displayCutout()
             )
             val imeBars = insets.getInsets(WindowInsetsCompat.Type.ime())
-            val imeOpen = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeBars.bottom > sysBars.bottom + 40
-            if (imeOpen != isImeVisible) {
-                isImeVisible = imeOpen
-                updateKeyboardDockVisibility()
-            }
             val bottomPadding = maxOf(sysBars.bottom, imeBars.bottom)
 
             binding.editorContentRoot.setPadding(
@@ -828,22 +835,17 @@ class MainActivity : AppCompatActivity() {
         editorController.editor.setWordwrap(settings.wordWrap)
         applyThemeChrome()
         refreshFileTree()
-        observeActiveProjectDirectory()
         runLspAnalysisForCurrentFile()
         updateStatusLine()
     }
 
     override fun onPause() {
+        treeWatcherHandler.removeCallbacks(treeWatcherRunnable)
         autoSaveHandler.removeCallbacks(autoSaveRunnable)
         if (settings.autoSaveEnabled) {
             performAutoSaveModifiedTabs()
         }
         super.onPause()
-    }
-
-    override fun onDestroy() {
-        stopObservingProjectDirectory()
-        super.onDestroy()
     }
 
     private fun openTerminalInDirectory(
@@ -883,28 +885,17 @@ class MainActivity : AppCompatActivity() {
 
         TooltipCompat.setTooltipText(
             binding.btnToggleDockMode,
-            "Tap: Switch Symbols / Edit Tools • Long-press: Pin bar when keyboard is closed"
+            "Tap: Switch Symbols (SYM) / Edit Tools (EDIT)"
         )
         binding.btnToggleDockMode.setOnClickListener { v ->
             OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
             isEditDockMode = !isEditDockMode
             updateKeyboardDockModeUi()
         }
-        binding.btnToggleDockMode.setOnLongClickListener { v ->
-            OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
-            dockPinnedOpen = !dockPinnedOpen
-            updateKeyboardDockVisibility()
-            Toast.makeText(
-                this,
-                if (dockPinnedOpen) "Keyboard dock pinned visible" else "Keyboard dock auto-hides when keyboard closes",
-                Toast.LENGTH_SHORT
-            ).show()
-            true
-        }
 
         setupQuickActionRow()
         updateKeyboardDockModeUi()
-        updateKeyboardDockVisibility()
+        binding.keyboardDockContainer.visibility = if (dockHiddenManually) View.GONE else View.VISIBLE
     }
 
     private fun updateKeyboardDockModeUi() {
@@ -927,11 +918,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateKeyboardDockVisibility() {
-        val shouldShow = isImeVisible || dockPinnedOpen
-        binding.keyboardDockContainer.visibility = if (shouldShow) View.VISIBLE else View.GONE
-    }
-
     private fun setupQuickActionRow() {
         val container = binding.quickActionContainer
         container.removeAllViews()
@@ -946,7 +932,6 @@ class MainActivity : AppCompatActivity() {
             val action: () -> Unit
         )
 
-        // Focused exclusively on code manipulation & intelligence (no redundant Run/Save/Git buttons from top bar)
         val tools = listOf(
             QuickToolIcon(R.drawable.ic_lsp, "LSP: Hover / Definition / References / Rename") { showLspCodeActionsDialog() },
             QuickToolIcon(R.drawable.ic_format_align, "Format Document") { formatCurrentDocument() },
@@ -1514,12 +1499,17 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize 3 Sidebar Mode Tabs: [Files] [Git] [Outline]
         val sidebarTabLabels = listOf("Files", "Git", "Outline")
+        suppressSidebarTabCallback = true
         binding.sidebarModeTabs.removeAllTabs()
         for (lbl in sidebarTabLabels) {
             binding.sidebarModeTabs.addTab(binding.sidebarModeTabs.newTab().setText(lbl))
         }
+        binding.sidebarModeTabs.getTabAt(activeSidebarTab)?.select()
+        suppressSidebarTabCallback = false
+
         binding.sidebarModeTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                if (suppressSidebarTabCallback) return
                 val pos = tab?.position ?: return
                 selectSidebarTab(pos)
             }
@@ -1530,6 +1520,12 @@ class MainActivity : AppCompatActivity() {
         binding.mainDrawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
                 refreshActiveSidebarPage()
+                treeWatcherHandler.removeCallbacks(treeWatcherRunnable)
+                treeWatcherHandler.postDelayed(treeWatcherRunnable, 2000L)
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                treeWatcherHandler.removeCallbacks(treeWatcherRunnable)
             }
         })
 
@@ -1601,9 +1597,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectSidebarTab(tabIdx: Int) {
         activeSidebarTab = tabIdx.coerceIn(0, 2)
+        suppressSidebarTabCallback = true
         binding.sidebarModeTabs.getTabAt(activeSidebarTab)?.let { tab ->
             if (!tab.isSelected) tab.select()
         }
+        suppressSidebarTabCallback = false
         binding.sidebarFilesPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_FILES) View.VISIBLE else View.GONE
         binding.sidebarGitPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_GIT) View.VISIBLE else View.GONE
         binding.sidebarOutlinePage.visibility = if (activeSidebarTab == SIDEBAR_TAB_OUTLINE) View.VISIBLE else View.GONE
@@ -1616,31 +1614,6 @@ class MainActivity : AppCompatActivity() {
             SIDEBAR_TAB_GIT -> renderSidebarGitPage()
             SIDEBAR_TAB_OUTLINE -> renderSidebarOutlinePage()
         }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun observeActiveProjectDirectory() {
-        stopObservingProjectDirectory()
-        val activeDir = ProjectManager.ensureDefaultLocalWorkspace(this)
-        runCatching {
-            val mask = FileObserver.CREATE or FileObserver.DELETE or FileObserver.MOVED_FROM or FileObserver.MOVED_TO
-            projectFileObserver = object : FileObserver(activeDir.absolutePath, mask) {
-                override fun onEvent(event: Int, path: String?) {
-                    if (path != null && !path.startsWith(".git")) {
-                        mainHandler.post {
-                            if (binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START) && activeSidebarTab == SIDEBAR_TAB_FILES) {
-                                refreshFileTree()
-                            }
-                        }
-                    }
-                }
-            }.also { it.startWatching() }
-        }
-    }
-
-    private fun stopObservingProjectDirectory() {
-        runCatching { projectFileObserver?.stopWatching() }
-        projectFileObserver = null
     }
 
     /**
@@ -2217,7 +2190,6 @@ class MainActivity : AppCompatActivity() {
         openInitialWorkspaceTabs()
         updateToolbarProjectTitle()
         refreshActiveSidebarPage()
-        observeActiveProjectDirectory()
     }
 
     private fun openProjectSidebar() {
@@ -2234,6 +2206,7 @@ class MainActivity : AppCompatActivity() {
         val activeName = activeDir.name
         binding.projectTitleText.text = "$activeName ▾"
         binding.projectModeSubtitle.text = ProjectManager.guestPathForDir(this, activeDir)
+        lastTreeSignature = ProjectManager.computeTreeSignature(this)
         updateToolbarProjectTitle()
 
         val container = binding.fileTreeContainer
