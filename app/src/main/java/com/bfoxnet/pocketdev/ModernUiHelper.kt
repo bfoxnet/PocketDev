@@ -1,5 +1,10 @@
 package com.bfoxnet.pocketdev
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
@@ -8,32 +13,63 @@ import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
+import android.os.Build
 import android.text.InputType
+import android.transition.AutoTransition
+import android.transition.TransitionManager
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
+import android.view.animation.PathInterpolator
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
+import io.github.rosemoe.sora.widget.CodeEditor
 
 /**
  * Material 3 Bottom Sheet, Context Menu, Confirmation Dialog, Input Dialog,
- * Choice Picker, and App Typography (`Plus Jakarta Sans`) helper.
+ * Choice Picker, Multi-Font App Typography (`Plus Jakarta Sans`, `Google Sans`,
+ * `Inter`, `Geist`, `Noto Sans`, `DM Sans`, `Rubik`, `Outfit`), Decoupled App UI Palette,
+ * and 60–120fps Hardware-Accelerated Animation & Transition Engine.
  */
 object ModernUiHelper {
 
-    const val PRIMARY_COLOR_HEX = "#00695C"
-    const val PRIMARY_LIGHT_HEX = "#26A69A"
+    const val PRIMARY_COLOR_HEX = "#B85648"
+    const val PRIMARY_LIGHT_HEX = "#D47264"
     val PRIMARY_COLOR: Int = Color.parseColor(PRIMARY_COLOR_HEX)
     val PRIMARY_LIGHT_COLOR: Int = Color.parseColor(PRIMARY_LIGHT_HEX)
+
+    // Dedicated App UI Palette (decoupled from Editor Theme so Editor Theme applies ONLY to CodeEditor)
+    const val UI_SURFACE_HEX = "#141318"
+    const val UI_CHROME_HEX = "#1C1B21"
+    const val UI_SYMBOL_HEX = "#25242C"
+    const val UI_FG_HEX = "#ECE6E5"
+    const val UI_SUBTLE_HEX = "#9F989E"
+    const val UI_BORDER_HEX = "#38343E"
+
+    val UI_SURFACE_COLOR: Int = Color.parseColor(UI_SURFACE_HEX)
+    val UI_CHROME_COLOR: Int = Color.parseColor(UI_CHROME_HEX)
+    val UI_SYMBOL_COLOR: Int = Color.parseColor(UI_SYMBOL_HEX)
+    val UI_FG_COLOR: Int = Color.parseColor(UI_FG_HEX)
+    val UI_SUBTLE_COLOR: Int = Color.parseColor(UI_SUBTLE_HEX)
+    val UI_BORDER_COLOR: Int = Color.parseColor(UI_BORDER_HEX)
+
+    /** Smooth spring-like cubic bezier for 60-120fps UI transitions. */
+    val SPRING_INTERPOLATOR = PathInterpolator(0.22f, 1f, 0.36f, 1f)
+    val FAST_OUT_SLOW_IN = PathInterpolator(0.4f, 0f, 0.2f, 1f)
+
+    @Volatile
+    private var cachedFontId: String = ""
 
     @Volatile
     private var cachedRegular: Typeface? = null
@@ -47,36 +83,310 @@ object ModernUiHelper {
     @Volatile
     private var cachedBold: Typeface? = null
 
+    fun invalidateUiFontCache() {
+        cachedFontId = ""
+        cachedRegular = null
+        cachedMedium = null
+        cachedSemiBold = null
+        cachedBold = null
+    }
+
+    private fun ensureFontCache(context: Context): Settings.Companion.UiFont {
+        val selectedId = Settings(context).uiFontFamily
+        val uiFont = Settings.uiFontById(selectedId)
+        if (cachedFontId != uiFont.id) {
+            cachedFontId = uiFont.id
+            cachedRegular = null
+            cachedMedium = null
+            cachedSemiBold = null
+            cachedBold = null
+        }
+        return uiFont
+    }
+
     fun appFontRegular(context: Context): Typeface {
+        val uiFont = ensureFontCache(context)
         cachedRegular?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans) }.getOrNull()
+        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.regularRes) }.getOrNull()
             ?: Typeface.SANS_SERIF
         cachedRegular = tf
         return tf
     }
 
     fun appFontMedium(context: Context): Typeface {
+        val uiFont = ensureFontCache(context)
         cachedMedium?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_medium) }.getOrNull()
+        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.mediumRes) }.getOrNull()
             ?: Typeface.create("sans-serif-medium", Typeface.NORMAL)
         cachedMedium = tf
         return tf
     }
 
     fun appFontSemiBold(context: Context): Typeface {
+        val uiFont = ensureFontCache(context)
         cachedSemiBold?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_semibold) }.getOrNull()
+        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.semiBoldRes) }.getOrNull()
             ?: Typeface.create("sans-serif-medium", Typeface.BOLD)
         cachedSemiBold = tf
         return tf
     }
 
     fun appFontBold(context: Context): Typeface {
+        val uiFont = ensureFontCache(context)
         cachedBold?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_bold) }.getOrNull()
+        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.boldRes) }.getOrNull()
             ?: Typeface.DEFAULT_BOLD
         cachedBold = tf
         return tf
+    }
+
+    /**
+     * Recursively applies the active UI font family (`Settings.uiFontFamily`) across [root],
+     * skipping [CodeEditor] and any explicit monospace preview/code views (`tag == "monospace"`).
+     */
+    fun applyUiFontToViewTree(context: Context, root: View?, skipViewIds: Set<Int> = emptySet()) {
+        if (root == null || root is CodeEditor) return
+        if (root.id in skipViewIds || root.tag == "monospace") return
+        if (root is TextView) {
+            val currentTf = root.typeface
+            if (currentTf != Typeface.MONOSPACE) {
+                val isBold = currentTf?.isBold == true
+                root.typeface = if (isBold) appFontBold(context) else appFontRegular(context)
+            }
+        }
+        if (root is ViewGroup) {
+            for (i in 0 until root.childCount) {
+                applyUiFontToViewTree(context, root.getChildAt(i), skipViewIds)
+            }
+        }
+    }
+
+    /**
+     * Requests 60-120fps high refresh rate rendering on devices with 90Hz/120Hz displays.
+     */
+    fun enableHighRefreshRate(activity: Activity) {
+        runCatching {
+            val win = activity.window ?: return
+            val params = win.attributes
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                @Suppress("DEPRECATION")
+                val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    activity.display
+                } else {
+                    activity.windowManager.defaultDisplay
+                }
+                val modes = display?.supportedModes
+                if (!modes.isNullOrEmpty()) {
+                    val currentMode = display.mode
+                    val bestMode = modes
+                        .filter { it.physicalWidth == currentMode.physicalWidth && it.physicalHeight == currentMode.physicalHeight }
+                        .maxByOrNull { it.refreshRate }
+                        ?: modes.maxByOrNull { it.refreshRate }
+                    if (bestMode != null) {
+                        params.preferredDisplayModeId = bestMode.modeId
+                    }
+                }
+            }
+            params.preferredRefreshRate = 120f
+            win.attributes = params
+        }
+    }
+
+    /**
+     * Attaches non-intrusive 60-120fps tactile press scale feedback (`1.0f -> 0.965f -> 1.0f`).
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    fun attachPressAnimation(view: View, scaleDown: Float = 0.965f) {
+        view.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.animate()
+                        .scaleX(scaleDown)
+                        .scaleY(scaleDown)
+                        .setDuration(110L)
+                        .setInterpolator(SPRING_INTERPOLATOR)
+                        .start()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(160L)
+                        .setInterpolator(SPRING_INTERPOLATOR)
+                        .start()
+                }
+            }
+            false
+        }
+    }
+
+    /**
+     * Smoothly animates switching between multi-page views at 60-120fps.
+     */
+    fun animatePageSwitch(
+        pages: List<View>,
+        targetPage: View,
+        forward: Boolean = true,
+        durationMs: Long = 220L
+    ) {
+        val density = targetPage.resources.displayMetrics.density
+        val offsetPx = (if (forward) 24f else -24f) * density
+        for (page in pages) {
+            if (page === targetPage) {
+                if (page.visibility != View.VISIBLE) {
+                    page.visibility = View.VISIBLE
+                    page.alpha = 0f
+                    page.translationX = offsetPx
+                    page.animate()
+                        .alpha(1f)
+                        .translationX(0f)
+                        .setDuration(durationMs)
+                        .setInterpolator(SPRING_INTERPOLATOR)
+                        .withLayer()
+                        .start()
+                } else {
+                    page.alpha = 1f
+                    page.translationX = 0f
+                }
+            } else if (page.visibility == View.VISIBLE) {
+                page.animate().cancel()
+                page.visibility = View.GONE
+                page.alpha = 1f
+                page.translationX = 0f
+            }
+        }
+    }
+
+    /**
+     * Smoothly animates showing or hiding a collapsible bar or panel at 60-120fps.
+     */
+    fun animatePanelVisibility(
+        view: View,
+        show: Boolean,
+        slideOffsetDp: Float = 12f,
+        durationMs: Long = 200L,
+        onEnd: (() -> Unit)? = null
+    ) {
+        val density = view.resources.displayMetrics.density
+        val offsetPx = slideOffsetDp * density
+        (view.parent as? ViewGroup)?.let { parent ->
+            runCatching {
+                val transition = AutoTransition().apply {
+                    duration = durationMs
+                    interpolator = FAST_OUT_SLOW_IN
+                }
+                TransitionManager.beginDelayedTransition(parent, transition)
+            }
+        }
+        view.animate().cancel()
+        if (show) {
+            if (view.visibility != View.VISIBLE) {
+                view.alpha = 0f
+                view.translationY = offsetPx
+                view.visibility = View.VISIBLE
+            }
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(durationMs)
+                .setInterpolator(SPRING_INTERPOLATOR)
+                .withEndAction { onEnd?.invoke() }
+                .start()
+        } else {
+            if (view.visibility == View.GONE) {
+                onEnd?.invoke()
+                return
+            }
+            view.animate()
+                .alpha(0f)
+                .translationY(offsetPx * 0.6f)
+                .setDuration((durationMs * 0.85f).toLong())
+                .setInterpolator(FAST_OUT_SLOW_IN)
+                .withEndAction {
+                    view.visibility = View.GONE
+                    view.alpha = 1f
+                    view.translationY = 0f
+                    onEnd?.invoke()
+                }
+                .start()
+        }
+    }
+
+    /**
+     * Smoothly animates a view's height change at 60-120fps.
+     */
+    fun animateViewHeight(view: View, targetHeightPx: Int, durationMs: Long = 220L) {
+        val startHeight = view.height.takeIf { it > 0 } ?: view.layoutParams?.height ?: targetHeightPx
+        if (startHeight == targetHeightPx) return
+        ValueAnimator.ofInt(startHeight, targetHeightPx).apply {
+            duration = durationMs
+            interpolator = SPRING_INTERPOLATOR
+            addUpdateListener { anim ->
+                val h = anim.animatedValue as Int
+                view.layoutParams = view.layoutParams.apply { height = h }
+                view.requestLayout()
+            }
+            start()
+        }
+    }
+
+    /**
+     * Smoothly cross-fades between [showView] and [hideView] at 60-120fps.
+     */
+    fun animateCrossFade(showView: View, hideView: View, durationMs: Long = 180L) {
+        hideView.animate().cancel()
+        showView.animate().cancel()
+        if (hideView.visibility == View.VISIBLE) {
+            hideView.animate()
+                .alpha(0f)
+                .setDuration((durationMs * 0.75f).toLong())
+                .setInterpolator(FAST_OUT_SLOW_IN)
+                .withEndAction {
+                    hideView.visibility = View.GONE
+                    hideView.alpha = 1f
+                }
+                .start()
+        } else {
+            hideView.visibility = View.GONE
+        }
+        if (showView.visibility != View.VISIBLE) {
+            showView.alpha = 0f
+            showView.visibility = View.VISIBLE
+        }
+        showView.animate()
+            .alpha(1f)
+            .setDuration(durationMs)
+            .setInterpolator(SPRING_INTERPOLATOR)
+            .start()
+    }
+
+    /**
+     * Smoothly animates a view entrance (for bottom sheets and dialogs).
+     */
+    private fun animateDialogEntrance(view: View, isBottomSheet: Boolean) {
+        val density = view.resources.displayMetrics.density
+        view.alpha = 0f
+        if (isBottomSheet) {
+            view.translationY = 36f * density
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(240L)
+                .setInterpolator(SPRING_INTERPOLATOR)
+                .withLayer()
+                .start()
+        } else {
+            view.scaleX = 0.92f
+            view.scaleY = 0.92f
+            view.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(210L)
+                .setInterpolator(SPRING_INTERPOLATOR)
+                .withLayer()
+                .start()
+        }
     }
 
     data class MenuOption(
@@ -114,22 +424,19 @@ object ModernUiHelper {
         return (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.55
     }
 
+    /**
+     * Resolves the global App UI Palette (using `#B85648` primary color and fixed UI surfaces
+     * so Editor Theme changes only affect the CodeEditor, never the surrounding app UI).
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun resolvePalette(context: Context): Palette {
-        val settings = Settings(context)
-        val theme = EditorController.themeById(settings.editorTheme)
-        val cardBg = Color.parseColor(theme.ui.chromeBg)
-        val surfaceBg = Color.parseColor(theme.ui.bg)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = PRIMARY_COLOR
-        val border = if (theme.dark) Color.parseColor("#338899AA") else Color.parseColor("#33666666")
         return Palette(
-            cardBg = cardBg,
-            surfaceBg = surfaceBg,
-            fgColor = fg,
-            subtleColor = subtle,
-            accentColor = accent,
-            borderColor = border
+            cardBg = UI_CHROME_COLOR,
+            surfaceBg = UI_SURFACE_COLOR,
+            fgColor = UI_FG_COLOR,
+            subtleColor = UI_SUBTLE_COLOR,
+            accentColor = PRIMARY_COLOR,
+            borderColor = UI_BORDER_COLOR
         )
     }
 
@@ -181,6 +488,7 @@ object ModernUiHelper {
         dialog.setContentView(wrapper)
         configureBottomSheetWindow(dialog, context, maxWidthDp = 460)
         dialog.show()
+        animateDialogEntrance(wrapper, isBottomSheet = true)
         return dialog
     }
 
@@ -287,6 +595,7 @@ object ModernUiHelper {
             minimumHeight = (40 * density).toInt()
             setOnClickListener { dialog.dismiss() }
         }
+        attachPressAnimation(cancelBtn)
         btnRow.addView(cancelBtn)
 
         val confirmBtn = MaterialButton(
@@ -313,12 +622,14 @@ object ModernUiHelper {
                 onConfirm()
             }
         }
+        attachPressAnimation(confirmBtn)
         btnRow.addView(confirmBtn)
 
         rootCard.addView(btnRow)
         dialog.setContentView(rootCard)
         configureDialogWindow(dialog, context, maxWidthDp = 360)
         dialog.show()
+        animateDialogEntrance(rootCard, isBottomSheet = false)
     }
 
     fun showModernContextMenu(
@@ -494,6 +805,7 @@ object ModernUiHelper {
                     opt.action()
                 }
             }
+            attachPressAnimation(row, 0.98f)
 
             if (opt.iconRes != null) {
                 val icon = ImageView(context).apply {
@@ -581,6 +893,7 @@ object ModernUiHelper {
         dialog.setContentView(rootCard)
         configureBottomSheetWindow(dialog, context, maxWidthDp = 420)
         dialog.show()
+        animateDialogEntrance(rootCard, isBottomSheet = true)
     }
 
     fun showModernSingleChoiceDialog(
@@ -739,6 +1052,7 @@ object ModernUiHelper {
                     onNeutral(v)
                 }
             }
+            attachPressAnimation(neutralBtn)
             btnRow.addView(neutralBtn)
 
             val spacer = View(context).apply {
@@ -761,6 +1075,7 @@ object ModernUiHelper {
             minimumHeight = (38 * density).toInt()
             setOnClickListener { dialog.dismiss() }
         }
+        attachPressAnimation(cancelBtn)
         btnRow.addView(cancelBtn)
 
         val confirmBtn = MaterialButton(
@@ -788,6 +1103,7 @@ object ModernUiHelper {
                 onConfirm(v)
             }
         }
+        attachPressAnimation(confirmBtn)
         btnRow.addView(confirmBtn)
 
         input.setOnEditorActionListener { _, actionId, _ ->
@@ -805,6 +1121,7 @@ object ModernUiHelper {
         dialog.setContentView(rootCard)
         configureDialogWindow(dialog, context, maxWidthDp = 360, showKeyboard = true)
         dialog.show()
+        animateDialogEntrance(rootCard, isBottomSheet = false)
         input.requestFocus()
     }
 

@@ -150,24 +150,32 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
         return s
     }
 
-    fun currentSurfaceColor(): Int =
+    /** Returns the active Editor Theme background color (for the CodeEditor canvas only). */
+    fun currentEditorBackgroundColor(): Int =
         runCatching { editor.colorScheme.getColor(EditorColorScheme.WHOLE_BACKGROUND) }
             .getOrDefault(Color.parseColor(themeById(settings.editorTheme).ui.bg))
 
-    fun currentChromeColor(): Int =
-        Color.parseColor(themeById(settings.editorTheme).ui.chromeBg)
-
-    fun currentSymbolBarColor(): Int =
-        Color.parseColor(themeById(settings.editorTheme).ui.symbolBg)
-
-    fun currentForegroundColor(): Int =
+    /** Returns the active Editor Theme foreground color (for the CodeEditor canvas only). */
+    fun currentEditorForegroundColor(): Int =
         Color.parseColor(themeById(settings.editorTheme).ui.fg)
 
-    fun currentSubtleColor(): Int =
-        Color.parseColor(themeById(settings.editorTheme).ui.lineNumActive)
+    /** App UI surface color (decoupled from Editor Theme). */
+    fun currentSurfaceColor(): Int = ModernUiHelper.UI_SURFACE_COLOR
 
-    fun isCurrentThemeDark(): Boolean =
-        themeById(settings.editorTheme).dark
+    /** App UI chrome color (decoupled from Editor Theme). */
+    fun currentChromeColor(): Int = ModernUiHelper.UI_CHROME_COLOR
+
+    /** App UI symbol bar color (decoupled from Editor Theme). */
+    fun currentSymbolBarColor(): Int = ModernUiHelper.UI_SYMBOL_COLOR
+
+    /** App UI foreground text color (decoupled from Editor Theme). */
+    fun currentForegroundColor(): Int = ModernUiHelper.UI_FG_COLOR
+
+    /** App UI subtle text color (decoupled from Editor Theme). */
+    fun currentSubtleColor(): Int = ModernUiHelper.UI_SUBTLE_COLOR
+
+    /** App UI dark status bar state (decoupled from Editor Theme). */
+    fun isCurrentThemeDark(): Boolean = true
 
     /**
      * Assigns a language for [fileName] on demand and wraps it with in-editor Sora
@@ -1145,6 +1153,50 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
         )
 
         val AVAILABLE_THEMES = listOf(
+            Theme(
+                "github_dark_default", "GitHub Dark Default", "textmate/github_dark_default.json", dark = true,
+                ThemeUiPalette("#0d1117", "#e6edf3", "#161b22", "#1f3a5f", "#2f81f7", "#6e7681", "#e6edf3", "#21262d", "#30363d", "#30363d", "#010409", "#010409", "#010409", "#3fb950", "#3b2e1a")
+            ),
+            Theme(
+                "github_dark_dimmed", "GitHub Dark Dimmed", "textmate/github_dark_dimmed.json", dark = true,
+                ThemeUiPalette("#22272e", "#adbac7", "#2d333b", "#264466", "#539bf5", "#636e7b", "#adbac7", "#2d333b", "#444c56", "#373e47", "#1c2128", "#1c2128", "#1c2128", "#57ab5a", "#4a3b22")
+            ),
+            Theme(
+                "github_dark_high_contrast", "GitHub Dark High Contrast", "textmate/github_dark_high_contrast.json", dark = true,
+                ThemeUiPalette("#0a0c10", "#f0f3f6", "#151921", "#1f477d", "#409eff", "#7a828e", "#f0f3f6", "#21262d", "#484f58", "#30363d", "#010409", "#010409", "#010409", "#26cd4d", "#4b3818")
+            ),
+            Theme(
+                "github_light_default", "GitHub Light Default", "textmate/github_light_default.json", dark = false,
+                ThemeUiPalette("#ffffff", "#1f2328", "#f6f8fa", "#ddf4ff", "#0969da", "#8c959f", "#1f2328", "#eaeef2", "#d0d7de", "#d0d7de", "#f6f8fa", "#f6f8fa", "#eaeef2", "#116329", "#fff8c5")
+            ),
+            Theme(
+                "dark_islands", "Dark Islands", "textmate/dark_islands.json", dark = true,
+                ThemeUiPalette("#191a1c", "#bcbec4", "#26282e", "#214283", "#ced0d6", "#4b5059", "#bcbec4", "#2b2d30", "#43454a", "#393b40", "#111214", "#111214", "#0d0e10", "#56a8f5", "#32593d")
+            ),
+            Theme(
+                "aura_dark", "Aura Dark", "textmate/aura_dark.json", dark = true,
+                ThemeUiPalette("#15141b", "#edecee", "#1c1b22", "#3d375e", "#a277ff", "#525156", "#a277ff", "#252330", "#4d466e", "#2e2b38", "#110f18", "#110f18", "#0c0b11", "#61ffca", "#3d375e")
+            ),
+            Theme(
+                "aura_dark_soft_text", "Aura Dark (Soft Text)", "textmate/aura_dark_soft_text.json", dark = true,
+                ThemeUiPalette("#15141b", "#bdbdbd", "#1c1b22", "#3d375e", "#a277ff", "#525156", "#a277ff", "#252330", "#4d466e", "#2e2b38", "#110f18", "#110f18", "#0c0b11", "#61ffca", "#3d375e")
+            ),
+            Theme(
+                "aura_soft_dark", "Aura Soft Dark", "textmate/aura_soft_dark.json", dark = true,
+                ThemeUiPalette("#21202e", "#edecee", "#2b293b", "#3d375e", "#8464c6", "#5b5870", "#8464c6", "#2e2c40", "#544d7a", "#3a374e", "#191824", "#191824", "#14131d", "#54c59f", "#3d375e")
+            ),
+            Theme(
+                "catppuccin_macchiato", "Catppuccin Macchiato", "textmate/catppuccin_macchiato.json", dark = true,
+                ThemeUiPalette("#24273a", "#cad3f5", "#30344c", "#494d64", "#f4dbd6", "#8087a2", "#c6a0f6", "#363a4f", "#5b6078", "#494d64", "#1e2030", "#1e2030", "#181926", "#5b6078", "#4d3847")
+            ),
+            Theme(
+                "catppuccin_frappe", "Catppuccin Frappé", "textmate/catppuccin_frappe.json", dark = true,
+                ThemeUiPalette("#303446", "#c6d0f5", "#3b4056", "#51576d", "#f2d5cf", "#838ba7", "#ca9ee6", "#414559", "#626880", "#51576d", "#292c3c", "#292c3c", "#232634", "#626880", "#543d4c")
+            ),
+            Theme(
+                "catppuccin_latte", "Catppuccin Latte", "textmate/catppuccin_latte.json", dark = false,
+                ThemeUiPalette("#eff1f5", "#4c4f69", "#e2e6ee", "#bcc0cc", "#dc8a78", "#8c8fa1", "#8839ef", "#ccd0da", "#acb0be", "#bcc0cc", "#e6e9ef", "#e6e9ef", "#dce0e8", "#7287fd", "#eaccd4")
+            ),
             Theme(
                 "one_dark_pro", "One Dark Pro", "textmate/one_dark_pro.json", dark = true,
                 ThemeUiPalette("#282c34", "#abb2bf", "#2c313c", "#3e4451", "#528bff", "#495162", "#abb2bf", "#3b4048", "#626772", "#3b4048", "#21252b", "#21252b", "#1d1f23", "#515a6b", "#525243")

@@ -26,12 +26,12 @@ class DiagActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val settings = Settings(this)
-        val theme = EditorController.themeById(settings.editorTheme)
-        val chrome = Color.parseColor(theme.ui.chromeBg)
-        val surface = Color.parseColor(theme.ui.bg)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        ModernUiHelper.enableHighRefreshRate(this)
+        val uiPalette = ModernUiHelper.resolvePalette(this)
+        val chrome = uiPalette.cardBg
+        val surface = uiPalette.surfaceBg
+        val fg = uiPalette.fgColor
+        val subtle = uiPalette.subtleColor
         val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
@@ -148,8 +148,8 @@ class DiagActivity : AppCompatActivity() {
             win.statusBarColor = chrome
             win.navigationBarColor = chrome
             val controller = WindowCompat.getInsetsController(win, root)
-            controller.isAppearanceLightStatusBars = !theme.dark
-            controller.isAppearanceLightNavigationBars = !theme.dark
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
         }
 
         share.setOnClickListener {

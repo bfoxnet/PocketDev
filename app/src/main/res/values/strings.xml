@@ -6,6 +6,8 @@
     <string name="menu_run">Run</string>
     <string name="menu_run_config">Run Config</string>
     <string name="menu_format_document">Format</string>
+    <string name="menu_prettier">Prettier Options</string>
+    <string name="menu_plugins">Plugins</string>
     <string name="menu_lsp_refactor">Code Actions</string>
     <string name="menu_github">Git</string>
     <string name="menu_save">Save</string>

@@ -43,7 +43,7 @@ object GitHubManager {
     private const val DEFAULT_GITHUB_OAUTH_CLIENT_ID = "178c6fc778ccc68e1d6a"
 
     enum class GitFileState(val badge: String, val colorHex: String, val label: String) {
-        MODIFIED("M", "#26A69A", "Modified"),
+        MODIFIED("M", "#D47264", "Modified"),
         ADDED("A", "#81C784", "Added"),
         UNTRACKED("U", "#4FC3F7", "Untracked"),
         DELETED("D", "#E57373", "Deleted"),

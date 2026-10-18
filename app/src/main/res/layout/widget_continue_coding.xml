@@ -26,7 +26,7 @@
                 android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:singleLine="true"
                 android:text="Continue Coding"
-                android:textColor="#26A69A"
+                android:textColor="#D47264"
                 android:textSize="11.5sp"
                 android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
                 android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:singleLine="true"
                 android:text="Main.kt"
-                android:textColor="#E6E1E5"
+                android:textColor="#ECE6E5"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -50,7 +50,7 @@
                 android:fontFamily="@font/plus_jakarta_sans"
                 android:singleLine="true"
                 android:text="Tap to resume editing"
-                android:textColor="#9E9E9E"
+                android:textColor="#9F989E"
                 android:textSize="11sp" />
         </LinearLayout>
 
@@ -64,7 +64,7 @@
             android:paddingHorizontal="10dp"
             android:paddingVertical="6dp"
             android:text="Terminal"
-            android:textColor="#E6E1E5"
+            android:textColor="#ECE6E5"
             android:textSize="11.5sp"
             android:textStyle="bold" />
 
@@ -72,7 +72,7 @@
             android:id="@+id/widgetResumeBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#00695C"
+            android:background="#B85648"
             android:fontFamily="@font/plus_jakarta_sans_bold"
             android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"

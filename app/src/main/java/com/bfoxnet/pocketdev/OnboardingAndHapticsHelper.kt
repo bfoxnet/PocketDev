@@ -131,7 +131,7 @@ object OnboardingAndHapticsHelper {
                     }
                     rootContainer.addView(sub)
 
-                    val featuredThemes = listOf("darcula", "tokyo_night", "catppuccin_mocha", "one_dark_pro", "dracula", "quietlight")
+                    val featuredThemes = listOf("github_dark_default", "dark_islands", "aura_dark", "catppuccin_mocha", "catppuccin_macchiato", "darcula", "tokyo_night", "one_dark_pro", "dracula", "github_light_default")
                     val themeScroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
                     val themeRow = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
                     for (tId in featuredThemes) {

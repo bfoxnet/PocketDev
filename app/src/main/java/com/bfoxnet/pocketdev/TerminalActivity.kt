@@ -65,6 +65,7 @@ class TerminalActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ModernUiHelper.enableHighRefreshRate(this)
         binding = ActivityTerminalBinding.inflate(layoutInflater)
         setContentView(binding.root)
         settings = Settings(this)
@@ -968,7 +969,7 @@ class TerminalActivity : AppCompatActivity() {
         var persistentActiveSessionIndex: Int = -1
 
         val TERMUX_STYLES = listOf(
-            TermuxStylePalette("Default Black", "#000000", "#D0D0D0", "#141414", "#212121", "#FFFFFF", "#26A69A"),
+            TermuxStylePalette("Default Black", "#000000", "#D0D0D0", "#141414", "#212121", "#FFFFFF", "#B85648"),
             TermuxStylePalette("Dracula", "#282A36", "#F8F8F2", "#1E1F29", "#343746", "#F8F8F2", "#BD93F9"),
             TermuxStylePalette("Tokyo Night", "#1A1B26", "#C0CAF5", "#16161E", "#24283B", "#C0CAF5", "#7AA2F7"),
             TermuxStylePalette("Nord", "#2E3440", "#D8DEE9", "#242933", "#3B4252", "#ECEFF4", "#88C0D0"),

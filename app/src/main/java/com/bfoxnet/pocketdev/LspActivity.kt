@@ -36,6 +36,7 @@ class LspActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ModernUiHelper.enableHighRefreshRate(this)
         binding = ActivityLspBinding.inflate(layoutInflater)
         setContentView(binding.root)
         settings = Settings(this)
@@ -117,9 +118,9 @@ class LspActivity : AppCompatActivity() {
     }
 
     private fun styleFilterChips() {
-        val theme = EditorController.themeById(settings.editorTheme)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val uiPalette = ModernUiHelper.resolvePalette(this)
+        val fg = uiPalette.fgColor
+        val subtle = uiPalette.subtleColor
         val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
@@ -153,11 +154,11 @@ class LspActivity : AppCompatActivity() {
     }
 
     private fun applyThemeChrome() {
-        val theme = EditorController.themeById(settings.editorTheme)
-        val chrome = Color.parseColor(theme.ui.chromeBg)
-        val surface = Color.parseColor(theme.ui.bg)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val uiPalette = ModernUiHelper.resolvePalette(this)
+        val chrome = uiPalette.cardBg
+        val surface = uiPalette.surfaceBg
+        val fg = uiPalette.fgColor
+        val subtle = uiPalette.subtleColor
 
         binding.lspRoot.setBackgroundColor(chrome)
         binding.toolbar.setBackgroundColor(chrome)
@@ -168,13 +169,14 @@ class LspActivity : AppCompatActivity() {
         binding.lspFilterInput.setTextColor(fg)
         binding.lspFilterInput.setHintTextColor(subtle)
         styleFilterChips()
+        ModernUiHelper.applyUiFontToViewTree(this, binding.lspRoot)
 
         window?.let { win ->
             win.statusBarColor = chrome
             win.navigationBarColor = surface
             val controller = WindowCompat.getInsetsController(win, binding.lspRoot)
-            controller.isAppearanceLightStatusBars = !theme.dark
-            controller.isAppearanceLightNavigationBars = !theme.dark
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
         }
     }
 
@@ -182,10 +184,10 @@ class LspActivity : AppCompatActivity() {
         val container = binding.lspListContainer
         container.removeAllViews()
 
-        val theme = EditorController.themeById(settings.editorTheme)
-        val cardBg = Color.parseColor(theme.ui.chromeBg)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val uiPalette = ModernUiHelper.resolvePalette(this)
+        val cardBg = uiPalette.cardBg
+        val fg = uiPalette.fgColor
+        val subtle = uiPalette.subtleColor
         val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 

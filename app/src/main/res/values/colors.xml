@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary App Palette (#00695C) -->
-    <color name="accent">#00695C</color>
-    <color name="accent_light">#26A69A</color>
-    <color name="tab_indicator">#00695C</color>
+    <!-- Primary App Palette (#B85648) -->
+    <color name="accent">#B85648</color>
+    <color name="accent_light">#D47264</color>
+    <color name="tab_indicator">#B85648</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="ic_launcher_background">#141318</color>
 
-    <color name="surface">#F8F9FA</color>
-    <color name="surface_container">#F1F3F4</color>
-    <color name="surface_container_high">#E8EAED</color>
-    <color name="on_surface">#1C1B1F</color>
-    <color name="on_surface_variant">#49454F</color>
-    <color name="outline">#CAC4D0</color>
-    <color name="chrome_background">#F1F3F4</color>
-    <color name="status_bar">#F1F3F4</color>
-    <color name="on_status_bar">#1C1B1F</color>
-    <color name="editor_surface">#FFFFFF</color>
-    <color name="symbol_bar">#E8EAED</color>
+    <color name="surface">#141318</color>
+    <color name="surface_container">#1C1B21</color>
+    <color name="surface_container_high">#25242C</color>
+    <color name="on_surface">#ECE6E5</color>
+    <color name="on_surface_variant">#9F989E</color>
+    <color name="outline">#38343E</color>
+    <color name="chrome_background">#1C1B21</color>
+    <color name="status_bar">#1C1B21</color>
+    <color name="on_status_bar">#ECE6E5</color>
+    <color name="editor_surface">#1E1E26</color>
+    <color name="symbol_bar">#25242C</color>
 </resources>

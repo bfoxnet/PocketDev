@@ -288,6 +288,96 @@
                         android:layout_marginHorizontal="16dp"
                         android:background="#1A888888" />
 
+                    <!-- Category 6: Prettier Formatter -->
+                    <LinearLayout
+                        android:id="@+id/nav_prettier"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_prettier"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_format_align" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_prettier"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Prettier Formatter" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_prettier"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Print width, tab width, quotes, semicolons, and format on save" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_prettier"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 7: Plugins & Extensions -->
+                    <LinearLayout
+                        android:id="@+id/nav_plugins"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_plugins"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_code" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_plugins"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Plugins &amp; Extensions" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_plugins"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Manage built-in plugins and custom extensions" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_plugins"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
                     <!-- Category 6: System & About -->
                     <LinearLayout
                         android:id="@+id/nav_system"
@@ -445,6 +535,38 @@
 
                         <com.google.android.material.textview.MaterialTextView
                             android:id="@+id/value_font"
+                            style="@style/PocketDev.PrefValue" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_ui_font"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_ui_font"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="UI Font Family" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_ui_font"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Interface typeface across menus, bars, and panels" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_ui_font"
                             style="@style/PocketDev.PrefValue" />
                     </LinearLayout>
 
@@ -637,6 +759,39 @@
                         android:id="@+id/switch_code_folding"
                         style="@style/PocketDev.PrefRow"
                         android:text="Code Folding" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_open_prettier_settings"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_open_prettier_settings"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Prettier Formatter Options" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_open_prettier_settings"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Configure quotes, semicolons, print width, and format on save" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_open_prettier_settings"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Configure" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
@@ -1247,6 +1402,464 @@
                             android:text="v2.1.0" />
                     </LinearLayout>
                 </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================================================ -->
+            <!-- PAGE 6: PRETTIER FORMATTER                                   -->
+            <!-- ============================================================ -->
+            <LinearLayout
+                android:id="@+id/page_prettier"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_prettier"
+                    style="@style/TextAppearance.Material3.LabelLarge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="Prettier Code Formatter"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
+
+                <!-- Live Prettier Preview Card -->
+                <LinearLayout
+                    android:id="@+id/card_prettier_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:layout_marginBottom="10dp"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/prettier_preview_badge"
+                        style="@style/TextAppearance.Material3.LabelSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                        android:text="LIVE PRETTIER OUTPUT PREVIEW"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/prettier_preview_code_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/jetbrains_mono"
+                        android:lineSpacingExtra="3dp"
+                        android:textSize="12.5sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/card_prettier"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_enabled"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Enable Prettier Formatter" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_format_on_save"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Format on Save" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_print_width"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_print_width"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Print Width (--print-width)" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_print_width"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Maximum line length before Prettier wraps code" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_print_width"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="80 cols" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_tab_width"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_tab_width"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Tab Width (--tab-width)" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_tab_width"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Number of spaces per indentation level" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_tab_width"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="2 spaces" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_use_tabs"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Indent with Tabs (--use-tabs)" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_semi"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Semicolons (--semi)" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_single_quote"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Single Quotes (--single-quote)" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_jsx_single_quote"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="JSX Single Quotes (--jsx-single-quote)" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_trailing_comma"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_trailing_comma"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Trailing Commas (--trailing-comma)" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_trailing_comma"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Print trailing commas in multi-line object and array literals" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_trailing_comma"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="es5" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_bracket_spacing"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Bracket Spacing ({ foo: bar })" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_prettier_bracket_same_line"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="JSX Bracket Same Line (&gt;)" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_arrow_parens"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_arrow_parens"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Arrow Function Parentheses" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_arrow_parens"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Include parentheses around a sole arrow function parameter" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_arrow_parens"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="always" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_eol"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_eol"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="End of Line (--end-of-line)" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_eol"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Line ending style across formatted files" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_eol"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="lf" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_prose_wrap"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_prose_wrap"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Markdown Prose Wrap" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_prose_wrap"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Wrap Markdown text at Print Width" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_prose_wrap"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="preserve" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_export_rc"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_export_rc"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Write .prettierrc.json to Project" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_export_rc"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Save current Prettier configuration to active project root" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_export_rc"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Export" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_prettier_reset"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_prettier_reset"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Reset Prettier Defaults" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_prettier_reset"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Restore standard Prettier 3.x configuration" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_prettier_reset"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Reset" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================================================ -->
+            <!-- PAGE 7: PLUGINS & EXTENSIONS                                 -->
+            <!-- ============================================================ -->
+            <LinearLayout
+                android:id="@+id/page_plugins"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/header_plugins"
+                        style="@style/TextAppearance.Material3.LabelLarge"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                        android:text="Installed Plugins &amp; Extensions"
+                        android:textColor="?attr/colorPrimary"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_create_custom_plugin"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="+ Create Plugin"
+                        android:textSize="11.5sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/plugins_list_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

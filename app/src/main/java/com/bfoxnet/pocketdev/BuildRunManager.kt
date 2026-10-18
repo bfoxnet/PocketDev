@@ -435,8 +435,10 @@ object BuildRunManager {
     ) {
         val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         Thread {
+            val settings = Settings(context)
             var formatted: String? = null
-            var label = "Built-in Formatter"
+            var label = if (settings.prettierEnabled) "Prettier" else "Built-in Formatter"
+            val prettierFlags = PrettierFormatter.buildCliFlags(settings)
 
             if (UbuntuProotManager.isUbuntuInstalled(context) && localFile != null && localFile.exists()) {
                 val ext = fileName.substringAfterLast('.', "").lowercase()
@@ -446,14 +448,14 @@ object BuildRunManager {
                         "command -v clang-format >/dev/null 2>&1 && clang-format $quoted"
                     "go" ->
                         "command -v gofmt >/dev/null 2>&1 && gofmt $quoted"
-                    "js", "jsx", "ts", "tsx", "json", "css", "scss", "html", "md", "yaml", "yml" ->
-                        "command -v prettier >/dev/null 2>&1 && prettier --stdin-filepath $quoted < $quoted"
+                    "js", "jsx", "ts", "tsx", "mjs", "cjs", "json", "jsonc", "css", "scss", "sass", "less", "html", "htm", "vue", "svelte", "md", "markdown", "yaml", "yml" ->
+                        "command -v prettier >/dev/null 2>&1 && prettier $prettierFlags --stdin-filepath $quoted < $quoted"
                     "py", "pyw" ->
                         "if command -v black >/dev/null 2>&1; then black -q - < $quoted; elif command -v autopep8 >/dev/null 2>&1; then autopep8 - < $quoted; else exit 1; fi"
                     "rs" ->
                         "command -v rustfmt >/dev/null 2>&1 && rustfmt --emit stdout < $quoted"
                     "sh", "bash", "zsh" ->
-                        "command -v shfmt >/dev/null 2>&1 && shfmt -i 4 < $quoted"
+                        "command -v shfmt >/dev/null 2>&1 && shfmt -i ${settings.prettierTabWidth} < $quoted"
                     else -> null
                 }
 
@@ -493,7 +495,11 @@ object BuildRunManager {
                 }
             }
 
-            val finalFormatted = formatted ?: formatStructureBuiltIn(fileName, content, 4)
+            val finalFormatted = formatted ?: if (settings.prettierEnabled) {
+                PrettierFormatter.formatInProcess(fileName, content, settings)
+            } else {
+                formatStructureBuiltIn(fileName, content, settings.prettierTabWidth)
+            }
             mainHandler.post {
                 onFormatted(finalFormatted, label)
             }

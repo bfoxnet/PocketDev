@@ -23,16 +23,19 @@ import kotlin.math.roundToInt
 
 /**
  * Multi-page Settings experience for PocketDev:
- * - Page 0 (`PAGE_HOME`): Clean category navigation hub (Appearance, Code Editor, Terminal,
- *   Linux Environment, Language Servers, System & About).
- * - Page 1 (`PAGE_APPEARANCE`): Live Code Preview, Color Theme, Editor Font, Font Size slider.
+ * - Page 0 (`PAGE_HOME`): Clean category navigation hub (Appearance, Code Editor, Prettier Formatter,
+ *   Plugins & Extensions, Terminal, Linux Environment, Language Servers, System & About).
+ * - Page 1 (`PAGE_APPEARANCE`): Live Code Preview, Editor Color Theme (editor-only), Editor Font (15+ fonts),
+ *   UI Font Family (8 font systems), Font Size slider.
  * - Page 2 (`PAGE_EDITOR`): Auto-Save, Auto-Save Delay, Save All, Ligatures, Word Wrap,
- *   Sticky Scroll, Highlight Matching Words, Code Folding.
+ *   Sticky Scroll, Highlight Matching Words, Code Folding, Prettier shortcut.
  * - Page 3 (`PAGE_TERMINAL`): Default Shell, Color Theme, Cursor Style, Haptic Feedback,
  *   Extra Keys Toolbar, Sticky Ctrl, Wake Lock, Keep Screen On, Terminal Properties.
  * - Page 4 (`PAGE_ENVIRONMENT`): System Architecture, Workspace Directory, Zsh & Plugins,
  *   Runtime & Backups, Language Servers, Open Terminal.
  * - Page 5 (`PAGE_SYSTEM`): Task Notifications, Diagnostics, Welcome Guide, About PocketDev.
+ * - Page 6 (`PAGE_PRETTIER`): Dedicated Prettier Formatter options & live output preview.
+ * - Page 7 (`PAGE_PLUGINS`): Dedicated IDE Plugins & Extensions manager.
  */
 class SettingsActivity : AppCompatActivity() {
 
@@ -104,6 +107,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ModernUiHelper.enableHighRefreshRate(this)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         settings = Settings(this)
@@ -127,7 +131,7 @@ class SettingsActivity : AppCompatActivity() {
         setupListeners()
         applyThemeChrome()
         refreshSummary()
-        navigateToPage(currentPage)
+        navigateToPage(currentPage, animate = false)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -141,19 +145,40 @@ class SettingsActivity : AppCompatActivity() {
         refreshSummary()
     }
 
-    private fun navigateToPage(page: Int) {
+    private fun navigateToPage(page: Int, animate: Boolean = true) {
+        val goingForward = page != PAGE_HOME && currentPage == PAGE_HOME
         currentPage = page
-        binding.pageHome.visibility = if (page == PAGE_HOME) View.VISIBLE else View.GONE
-        binding.pageAppearance.visibility = if (page == PAGE_APPEARANCE) View.VISIBLE else View.GONE
-        binding.pageEditor.visibility = if (page == PAGE_EDITOR) View.VISIBLE else View.GONE
-        binding.pageTerminal.visibility = if (page == PAGE_TERMINAL) View.VISIBLE else View.GONE
-        binding.pageEnvironment.visibility = if (page == PAGE_ENVIRONMENT) View.VISIBLE else View.GONE
-        binding.pageSystem.visibility = if (page == PAGE_SYSTEM) View.VISIBLE else View.GONE
+        val allPages = listOf(
+            binding.pageHome,
+            binding.pageAppearance,
+            binding.pageEditor,
+            binding.pageTerminal,
+            binding.pageEnvironment,
+            binding.pageSystem,
+            binding.pagePrettier,
+            binding.pagePlugins
+        )
+        val targetView = when (page) {
+            PAGE_APPEARANCE -> binding.pageAppearance
+            PAGE_EDITOR -> binding.pageEditor
+            PAGE_TERMINAL -> binding.pageTerminal
+            PAGE_ENVIRONMENT -> binding.pageEnvironment
+            PAGE_SYSTEM -> binding.pageSystem
+            PAGE_PRETTIER -> binding.pagePrettier
+            PAGE_PLUGINS -> binding.pagePlugins
+            else -> binding.pageHome
+        }
+
+        if (animate) {
+            ModernUiHelper.animatePageSwitch(allPages, targetView, forward = goingForward)
+        } else {
+            allPages.forEach { v -> v.visibility = if (v === targetView) View.VISIBLE else View.GONE }
+        }
 
         when (page) {
             PAGE_APPEARANCE -> {
                 binding.toolbar.title = "Appearance"
-                binding.toolbar.subtitle = "Theme, editor font, and text size"
+                binding.toolbar.subtitle = "Editor theme, editor font, UI font, and text size"
             }
             PAGE_EDITOR -> {
                 binding.toolbar.title = "Code Editor"
@@ -171,12 +196,23 @@ class SettingsActivity : AppCompatActivity() {
                 binding.toolbar.title = "System & About"
                 binding.toolbar.subtitle = "Diagnostics, notifications, and version info"
             }
+            PAGE_PRETTIER -> {
+                binding.toolbar.title = "Prettier Formatter"
+                binding.toolbar.subtitle = "Print width, quotes, semicolons, and formatting rules"
+            }
+            PAGE_PLUGINS -> {
+                binding.toolbar.title = "Plugins & Extensions"
+                binding.toolbar.subtitle = "Built-in IDE extensions and custom plugins"
+                PluginManager.renderPluginsSettingsList(this, binding.pluginsListContainer) {
+                    refreshCategorySummaries()
+                }
+            }
             else -> {
                 binding.toolbar.title = getString(R.string.settings_title)
                 binding.toolbar.subtitle = null
             }
         }
-        binding.settingsScroll.scrollTo(0, 0)
+        binding.settingsScroll.smoothScrollTo(0, 0)
     }
 
     private fun setupInsets() {
@@ -198,11 +234,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun applyThemeChrome() {
-        val theme = EditorController.themeById(settings.editorTheme)
-        val surface = Color.parseColor(theme.ui.bg)
-        val chrome = Color.parseColor(theme.ui.chromeBg)
-        val fg = Color.parseColor(theme.ui.fg)
-        val subtle = Color.parseColor(theme.ui.lineNumActive)
+        val uiPalette = ModernUiHelper.resolvePalette(this)
+        val surface = uiPalette.surfaceBg
+        val chrome = uiPalette.cardBg
+        val fg = uiPalette.fgColor
+        val subtle = uiPalette.subtleColor
         val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
@@ -218,19 +254,9 @@ class SettingsActivity : AppCompatActivity() {
             win.statusBarColor = chrome
             win.navigationBarColor = surface
             val controller = WindowCompat.getInsetsController(win, binding.settingsRoot)
-            controller.isAppearanceLightStatusBars = !theme.dark
-            controller.isAppearanceLightNavigationBars = !theme.dark
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
         }
-
-        // Style Live Preview Card
-        binding.cardLivePreview.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 14f * density
-            setColor(surface)
-            setStroke((1.5f * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accent, 0x77))
-        }
-        binding.previewBadge.setTextColor(accent)
-        binding.previewCodeText.setTextColor(fg)
 
         val headers = listOf(
             binding.headerAppearance,
@@ -238,7 +264,9 @@ class SettingsActivity : AppCompatActivity() {
             binding.headerTerminal,
             binding.headerUbuntu,
             binding.headerTools,
-            binding.headerSystem
+            binding.headerSystem,
+            binding.headerPrettier,
+            binding.headerPlugins
         )
         headers.forEach { it.setTextColor(accent) }
 
@@ -249,14 +277,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.cardTerminal,
             binding.cardUbuntu,
             binding.cardTools,
-            binding.cardSystem
+            binding.cardSystem,
+            binding.cardPrettier
         )
         cards.forEach { card: View ->
             card.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 14f * density
                 setColor(chrome)
-                setStroke((1 * density).toInt().coerceAtLeast(1), subtle and 0x33FFFFFF)
+                setStroke((1 * density).toInt().coerceAtLeast(1), uiPalette.borderColor)
             }
         }
 
@@ -266,6 +295,8 @@ class SettingsActivity : AppCompatActivity() {
             binding.iconNavTerminal,
             binding.iconNavEnvironment,
             binding.iconNavLsp,
+            binding.iconNavPrettier,
+            binding.iconNavPlugins,
             binding.iconNavSystem
         )
         navIcons.forEach { it.imageTintList = ColorStateList.valueOf(accent) }
@@ -276,6 +307,8 @@ class SettingsActivity : AppCompatActivity() {
             binding.chevNavTerminal,
             binding.chevNavEnvironment,
             binding.chevNavLsp,
+            binding.chevNavPrettier,
+            binding.chevNavPlugins,
             binding.chevNavSystem
         )
         navChevrons.forEach { it.imageTintList = ColorStateList.valueOf(subtle) }
@@ -286,11 +319,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.navTitleTerminal,
             binding.navTitleEnvironment,
             binding.navTitleLsp,
+            binding.navTitlePrettier,
+            binding.navTitlePlugins,
             binding.navTitleSystem,
             binding.titleTheme,
             binding.titleFont,
+            binding.titleUiFont,
             binding.titleFontSize,
             binding.titleAutoSaveDelay,
+            binding.titleOpenPrettierSettings,
             binding.titleDefaultShell,
             binding.titleTerminalStyle,
             binding.titleTerminalCursor,
@@ -304,7 +341,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.titleTerminal,
             binding.titleDiag,
             binding.titleOnboarding,
-            binding.titleAbout
+            binding.titleAbout,
+            binding.titlePrettierPrintWidth,
+            binding.titlePrettierTabWidth,
+            binding.titlePrettierTrailingComma,
+            binding.titlePrettierArrowParens,
+            binding.titlePrettierEol,
+            binding.titlePrettierProseWrap,
+            binding.titlePrettierExportRc,
+            binding.titlePrettierReset
         )
         titles.forEach { it.setTextColor(fg) }
 
@@ -314,11 +359,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.navSubTerminal,
             binding.navSubEnvironment,
             binding.navSubLsp,
+            binding.navSubPrettier,
+            binding.navSubPlugins,
             binding.navSubSystem,
             binding.subTheme,
             binding.subFont,
+            binding.subUiFont,
             binding.subFontSize,
             binding.subAutoSaveDelay,
+            binding.subOpenPrettierSettings,
             binding.subDefaultShell,
             binding.subTerminalStyle,
             binding.subTerminalCursor,
@@ -332,15 +381,25 @@ class SettingsActivity : AppCompatActivity() {
             binding.subTerminal,
             binding.subDiag,
             binding.subOnboarding,
-            binding.subAbout
+            binding.subAbout,
+            binding.subPrettierPrintWidth,
+            binding.subPrettierTabWidth,
+            binding.subPrettierTrailingComma,
+            binding.subPrettierArrowParens,
+            binding.subPrettierEol,
+            binding.subPrettierProseWrap,
+            binding.subPrettierExportRc,
+            binding.subPrettierReset
         )
         subtitles.forEach { it.setTextColor(subtle) }
 
         val values = listOf(
             binding.valueTheme,
             binding.valueFont,
+            binding.valueUiFont,
             binding.valueFontSize,
             binding.valueAutoSaveDelay,
+            binding.valueOpenPrettierSettings,
             binding.valueDefaultShell,
             binding.valueTerminalStyle,
             binding.valueTerminalCursor,
@@ -354,9 +413,20 @@ class SettingsActivity : AppCompatActivity() {
             binding.valueTerminal,
             binding.valueDiag,
             binding.valueOnboarding,
-            binding.valueAbout
+            binding.valueAbout,
+            binding.valuePrettierPrintWidth,
+            binding.valuePrettierTabWidth,
+            binding.valuePrettierTrailingComma,
+            binding.valuePrettierArrowParens,
+            binding.valuePrettierEol,
+            binding.valuePrettierProseWrap,
+            binding.valuePrettierExportRc,
+            binding.valuePrettierReset
         )
         values.forEach { it.setTextColor(accent) }
+
+        binding.btnCreateCustomPlugin.backgroundTintList = ColorStateList.valueOf(ModernUiHelper.withAlpha(accent, 0x26))
+        binding.btnCreateCustomPlugin.setTextColor(accent)
 
         binding.sliderFontSize.thumbTintList = ColorStateList.valueOf(accent)
         binding.sliderFontSize.trackActiveTintList = ColorStateList.valueOf(accent)
@@ -386,7 +456,15 @@ class SettingsActivity : AppCompatActivity() {
             binding.switchTerminalStickyCtrl,
             binding.switchTerminalAutoWakelock,
             binding.switchTerminalKeepScreen,
-            binding.switchNotifications
+            binding.switchNotifications,
+            binding.switchPrettierEnabled,
+            binding.switchPrettierFormatOnSave,
+            binding.switchPrettierUseTabs,
+            binding.switchPrettierSemi,
+            binding.switchPrettierSingleQuote,
+            binding.switchPrettierJsxSingleQuote,
+            binding.switchPrettierBracketSpacing,
+            binding.switchPrettierBracketSameLine
         ).forEach { sw ->
             sw.setTextColor(fg)
             sw.typeface = ModernUiHelper.appFontSemiBold(this)
@@ -394,10 +472,33 @@ class SettingsActivity : AppCompatActivity() {
             sw.trackTintList = switchTrackStates
         }
 
+        // Apply active UI font family across Settings view hierarchy (skipping code preview views)
+        ModernUiHelper.applyUiFontToViewTree(
+            this,
+            binding.settingsRoot,
+            skipViewIds = setOf(binding.previewCodeText.id, binding.prettierPreviewCodeText.id)
+        )
+
         updateLivePreviewCard()
+        updatePrettierPreviewCard()
     }
 
     private fun updateLivePreviewCard() {
+        val editorTheme = EditorController.themeById(settings.editorTheme)
+        val editorBg = Color.parseColor(editorTheme.ui.bg)
+        val editorFg = Color.parseColor(editorTheme.ui.fg)
+        val accent = ModernUiHelper.PRIMARY_COLOR
+        val density = resources.displayMetrics.density
+
+        binding.cardLivePreview.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 14f * density
+            setColor(editorBg)
+            setStroke((1.5f * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accent, 0x88))
+        }
+        binding.previewBadge.setTextColor(accent)
+        binding.previewCodeText.setTextColor(editorFg)
+
         val font = Settings.fontById(settings.fontFamily)
         val tf = runCatching { ResourcesCompat.getFont(this, font.resId) }.getOrNull() ?: Typeface.MONOSPACE
         binding.previewCodeText.typeface = tf
@@ -405,7 +506,33 @@ class SettingsActivity : AppCompatActivity() {
         binding.previewCodeText.fontFeatureSettings =
             if (settings.fontLigatures) "\"liga\" 1, \"calt\" 1" else "\"liga\" 0, \"calt\" 0"
         binding.previewBadge.text =
-            "LIVE PREVIEW • ${themeLabel(settings.editorTheme).uppercase()} • ${font.label.uppercase()} (${settings.fontSizeSp} SP)"
+            "EDITOR PREVIEW • ${themeLabel(settings.editorTheme).uppercase()} • ${font.label.uppercase()} (${settings.fontSizeSp} SP)"
+    }
+
+    private fun updatePrettierPreviewCard() {
+        val editorTheme = EditorController.themeById(settings.editorTheme)
+        val editorBg = Color.parseColor(editorTheme.ui.bg)
+        val editorFg = Color.parseColor(editorTheme.ui.fg)
+        val accent = ModernUiHelper.PRIMARY_COLOR
+        val density = resources.displayMetrics.density
+
+        binding.cardPrettierPreview.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 14f * density
+            setColor(editorBg)
+            setStroke((1.5f * density).toInt().coerceAtLeast(1), ModernUiHelper.withAlpha(accent, 0x88))
+        }
+        binding.prettierPreviewBadge.setTextColor(accent)
+        binding.prettierPreviewCodeText.setTextColor(editorFg)
+
+        val font = Settings.fontById(settings.fontFamily)
+        val tf = runCatching { ResourcesCompat.getFont(this, font.resId) }.getOrNull() ?: Typeface.MONOSPACE
+        binding.prettierPreviewCodeText.typeface = tf
+        binding.prettierPreviewCodeText.fontFeatureSettings =
+            if (settings.fontLigatures) "\"liga\" 1, \"calt\" 1" else "\"liga\" 0, \"calt\" 0"
+        binding.prettierPreviewCodeText.text = PrettierFormatter.buildLivePreviewSample(settings)
+        binding.prettierPreviewBadge.text =
+            "LIVE PRETTIER PREVIEW • ${PrettierFormatter.buildCliFlags(settings).uppercase()}"
     }
 
     private fun setupListeners() {
@@ -417,17 +544,61 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        val interactiveRows = listOf(
+            binding.navAppearance,
+            binding.navEditor,
+            binding.navTerminal,
+            binding.navEnvironment,
+            binding.navLsp,
+            binding.navPrettier,
+            binding.navPlugins,
+            binding.navSystem,
+            binding.rowTheme,
+            binding.rowFont,
+            binding.rowUiFont,
+            binding.rowFontSize,
+            binding.rowAutoSaveDelay,
+            binding.rowOpenPrettierSettings,
+            binding.rowDefaultShell,
+            binding.rowTerminalStyle,
+            binding.rowTerminalCursor,
+            binding.rowHapticFeedback,
+            binding.rowTermuxProps,
+            binding.rowUbuntuArch,
+            binding.rowUbuntuProjectsDir,
+            binding.rowZshSetup,
+            binding.rowUbuntuSync,
+            binding.rowLsp,
+            binding.rowTerminal,
+            binding.rowDiag,
+            binding.rowOnboarding,
+            binding.rowAbout,
+            binding.rowPrettierPrintWidth,
+            binding.rowPrettierTabWidth,
+            binding.rowPrettierTrailingComma,
+            binding.rowPrettierArrowParens,
+            binding.rowPrettierEol,
+            binding.rowPrettierProseWrap,
+            binding.rowPrettierExportRc,
+            binding.rowPrettierReset,
+            binding.btnCreateCustomPlugin
+        )
+        interactiveRows.forEach { ModernUiHelper.attachPressAnimation(it, 0.98f) }
+
         // Category Hub Navigation
         binding.navAppearance.setOnClickListener { navigateToPage(PAGE_APPEARANCE) }
         binding.navEditor.setOnClickListener { navigateToPage(PAGE_EDITOR) }
         binding.navTerminal.setOnClickListener { navigateToPage(PAGE_TERMINAL) }
         binding.navEnvironment.setOnClickListener { navigateToPage(PAGE_ENVIRONMENT) }
         binding.navLsp.setOnClickListener { startActivity(Intent(this, LspActivity::class.java)) }
+        binding.navPrettier.setOnClickListener { navigateToPage(PAGE_PRETTIER) }
+        binding.navPlugins.setOnClickListener { navigateToPage(PAGE_PLUGINS) }
         binding.navSystem.setOnClickListener { navigateToPage(PAGE_SYSTEM) }
 
         // Page 1: Appearance
         binding.rowTheme.setOnClickListener { showThemePicker() }
         binding.rowFont.setOnClickListener { showFontPicker() }
+        binding.rowUiFont.setOnClickListener { showUiFontPicker() }
         binding.rowFontSize.setOnClickListener { showFontSizePicker() }
         binding.sliderFontSize.value = settings.fontSizeSp.coerceIn(10, 24).toFloat()
         binding.sliderFontSize.addOnChangeListener { _, value, fromUser ->
@@ -447,6 +618,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         binding.rowAutoSaveDelay.setOnClickListener { showAutoSaveDelayPicker() }
+        binding.rowOpenPrettierSettings.setOnClickListener { navigateToPage(PAGE_PRETTIER) }
 
         binding.switchSaveAllOnSave.isChecked = settings.saveAllOnSavePress
         binding.switchSaveAllOnSave.setOnCheckedChangeListener { _, checked ->
@@ -458,6 +630,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchLigatures.setOnCheckedChangeListener { _, checked ->
             settings.fontLigatures = checked
             updateLivePreviewCard()
+            updatePrettierPreviewCard()
         }
 
         binding.switchWrap.isChecked = settings.wordWrap
@@ -478,6 +651,85 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchCodeFolding.isChecked = settings.codeFoldingEnabled
         binding.switchCodeFolding.setOnCheckedChangeListener { _, checked ->
             settings.codeFoldingEnabled = checked
+        }
+
+        // Page 6: Prettier Formatter
+        binding.switchPrettierEnabled.isChecked = settings.prettierEnabled
+        binding.switchPrettierEnabled.setOnCheckedChangeListener { _, checked ->
+            settings.prettierEnabled = checked
+            refreshSummary()
+        }
+
+        binding.switchPrettierFormatOnSave.isChecked = settings.prettierFormatOnSave
+        binding.switchPrettierFormatOnSave.setOnCheckedChangeListener { _, checked ->
+            settings.prettierFormatOnSave = checked
+            refreshSummary()
+        }
+
+        binding.rowPrettierPrintWidth.setOnClickListener { showPrettierPrintWidthPicker() }
+        binding.rowPrettierTabWidth.setOnClickListener { showPrettierTabWidthPicker() }
+
+        binding.switchPrettierUseTabs.isChecked = settings.prettierUseTabs
+        binding.switchPrettierUseTabs.setOnCheckedChangeListener { _, checked ->
+            settings.prettierUseTabs = checked
+            refreshSummary()
+        }
+
+        binding.switchPrettierSemi.isChecked = settings.prettierSemi
+        binding.switchPrettierSemi.setOnCheckedChangeListener { _, checked ->
+            settings.prettierSemi = checked
+            refreshSummary()
+        }
+
+        binding.switchPrettierSingleQuote.isChecked = settings.prettierSingleQuote
+        binding.switchPrettierSingleQuote.setOnCheckedChangeListener { _, checked ->
+            settings.prettierSingleQuote = checked
+            refreshSummary()
+        }
+
+        binding.switchPrettierJsxSingleQuote.isChecked = settings.prettierJsxSingleQuote
+        binding.switchPrettierJsxSingleQuote.setOnCheckedChangeListener { _, checked ->
+            settings.prettierJsxSingleQuote = checked
+            refreshSummary()
+        }
+
+        binding.rowPrettierTrailingComma.setOnClickListener { showPrettierTrailingCommaPicker() }
+
+        binding.switchPrettierBracketSpacing.isChecked = settings.prettierBracketSpacing
+        binding.switchPrettierBracketSpacing.setOnCheckedChangeListener { _, checked ->
+            settings.prettierBracketSpacing = checked
+            refreshSummary()
+        }
+
+        binding.switchPrettierBracketSameLine.isChecked = settings.prettierBracketSameLine
+        binding.switchPrettierBracketSameLine.setOnCheckedChangeListener { _, checked ->
+            settings.prettierBracketSameLine = checked
+            refreshSummary()
+        }
+
+        binding.rowPrettierArrowParens.setOnClickListener { showPrettierArrowParensPicker() }
+        binding.rowPrettierEol.setOnClickListener { showPrettierEolPicker() }
+        binding.rowPrettierProseWrap.setOnClickListener { showPrettierProseWrapPicker() }
+
+        binding.rowPrettierExportRc.setOnClickListener {
+            val rcFile = PrettierFormatter.writeProjectPrettierConfig(this)
+            Toast.makeText(this, "Saved ${rcFile.name} to active project", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.rowPrettierReset.setOnClickListener {
+            settings.resetPrettierDefaults()
+            refreshSummary()
+            Toast.makeText(this, "Prettier options reset to defaults", Toast.LENGTH_SHORT).show()
+        }
+
+        // Page 7: Plugins & Extensions
+        binding.btnCreateCustomPlugin.setOnClickListener {
+            PluginManager.showCreateCustomPluginDialog(this) {
+                PluginManager.renderPluginsSettingsList(this, binding.pluginsListContainer) {
+                    refreshCategorySummaries()
+                }
+                refreshCategorySummaries()
+            }
         }
 
         // Page 3: Terminal
@@ -609,11 +861,21 @@ class SettingsActivity : AppCompatActivity() {
     private fun refreshCategorySummaries() {
         val themeName = themeLabel(settings.editorTheme)
         val fontName = Settings.fontById(settings.fontFamily).label
-        binding.navSubAppearance.text = "$themeName • $fontName (${settings.fontSizeSp} sp)"
+        val uiFontName = Settings.uiFontById(settings.uiFontFamily).label
+        binding.navSubAppearance.text = "$themeName • $fontName (${settings.fontSizeSp} sp) • UI: $uiFontName"
 
         val autoSaveText = if (settings.autoSaveEnabled) "Auto-save on" else "Auto-save off"
         val wrapText = if (settings.wordWrap) "Word wrap on" else "Word wrap off"
         binding.navSubEditor.text = "$autoSaveText • $wrapText • Ligatures & folding"
+
+        val prettierStatus = if (settings.prettierEnabled) "Enabled" else "Disabled"
+        val quoteLabel = if (settings.prettierSingleQuote) "Single quotes" else "Double quotes"
+        val semiLabel = if (settings.prettierSemi) "Semi" else "No-semi"
+        binding.navSubPrettier.text = "$prettierStatus • ${settings.prettierTabWidth} spaces • $quoteLabel • $semiLabel"
+
+        val enabledPlugins = PluginManager.enabledPluginsCount(this)
+        val totalPlugins = PluginManager.allPlugins(this).size
+        binding.navSubPlugins.text = "$enabledPlugins of $totalPlugins active • Prettier, Auto-Pairs, Metrics & more"
 
         val shellName = if (settings.defaultShell == Settings.SHELL_BASH) "Bash" else "Zsh"
         val styleIdx = settings.terminalStyleIndex.coerceIn(0, TerminalActivity.TERMUX_STYLES.lastIndex)
@@ -633,6 +895,7 @@ class SettingsActivity : AppCompatActivity() {
 
         binding.valueTheme.text = themeLabel(settings.editorTheme)
         binding.valueFont.text = Settings.fontById(settings.fontFamily).label
+        binding.valueUiFont.text = Settings.uiFontById(settings.uiFontFamily).label
         binding.valueFontSize.text = getString(R.string.font_size_value, settings.fontSizeSp)
         binding.sliderFontSize.value = settings.fontSizeSp.coerceIn(10, 24).toFloat()
 
@@ -651,6 +914,22 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchStickyScroll.isChecked = settings.stickyScrollEnabled
         binding.switchWordMatch.isChecked = settings.wordMatchHighlightEnabled
         binding.switchCodeFolding.isChecked = settings.codeFoldingEnabled
+
+        // Prettier Formatter summary values
+        binding.switchPrettierEnabled.isChecked = settings.prettierEnabled
+        binding.switchPrettierFormatOnSave.isChecked = settings.prettierFormatOnSave
+        binding.valuePrettierPrintWidth.text = "${settings.prettierPrintWidth} cols"
+        binding.valuePrettierTabWidth.text = "${settings.prettierTabWidth} spaces"
+        binding.switchPrettierUseTabs.isChecked = settings.prettierUseTabs
+        binding.switchPrettierSemi.isChecked = settings.prettierSemi
+        binding.switchPrettierSingleQuote.isChecked = settings.prettierSingleQuote
+        binding.switchPrettierJsxSingleQuote.isChecked = settings.prettierJsxSingleQuote
+        binding.valuePrettierTrailingComma.text = settings.prettierTrailingComma
+        binding.switchPrettierBracketSpacing.isChecked = settings.prettierBracketSpacing
+        binding.switchPrettierBracketSameLine.isChecked = settings.prettierBracketSameLine
+        binding.valuePrettierArrowParens.text = settings.prettierArrowParens
+        binding.valuePrettierEol.text = settings.prettierEndOfLine
+        binding.valuePrettierProseWrap.text = settings.prettierProseWrap
 
         binding.valueDefaultShell.text =
             if (settings.defaultShell == Settings.SHELL_BASH) "Bash" else "Zsh"
@@ -713,6 +992,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.valueTerminal.text = if (activeSessions > 0) "$activeSessions active" else "Open"
 
         updateLivePreviewCard()
+        updatePrettierPreviewCard()
     }
 
     private fun themeLabel(id: String): String =
@@ -725,12 +1005,13 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_theme),
-            subtitle = "Select editor and interface color theme",
+            subtitle = "Applies exclusively to the code editor canvas",
             items = labels,
             checkedIndex = checked
         ) { which ->
             settings.editorTheme = themes[which].id
-            applyThemeChrome()
+            updateLivePreviewCard()
+            updatePrettierPreviewCard()
             refreshSummary()
         }
     }
@@ -742,11 +1023,29 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_font),
-            subtitle = "Monospace typeface for code editor and terminal",
+            subtitle = "Monospace typeface for code editor and terminal (${fonts.size} fonts)",
             items = labels,
             checkedIndex = checked
         ) { which ->
             settings.fontFamily = fonts[which].id
+            refreshSummary()
+        }
+    }
+
+    private fun showUiFontPicker() {
+        val uiFonts = Settings.UI_FONTS
+        val labels = uiFonts.map { it.label }
+        val checked = uiFonts.indexOfFirst { it.id == settings.uiFontFamily }.coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "UI Font Family",
+            subtitle = "Choose global interface typeface",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.uiFontFamily = uiFonts[which].id
+            ModernUiHelper.invalidateUiFontCache()
+            applyThemeChrome()
             refreshSummary()
         }
     }
@@ -785,6 +1084,126 @@ class SettingsActivity : AppCompatActivity() {
         ) { which ->
             settings.autoSaveDelayMs = delays[which]
             settings.autoSaveEnabled = true
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierPrintWidthPicker() {
+        val widths = listOf(80, 100, 120, 140)
+        val labels = listOf(
+            "80 columns (Prettier Default)",
+            "100 columns",
+            "120 columns",
+            "140 columns (Wide)"
+        )
+        val checked = widths.indexOf(settings.prettierPrintWidth).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Print Width (--print-width)",
+            subtitle = "Line length that Prettier will wrap on",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierPrintWidth = widths[which]
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierTabWidthPicker() {
+        val widths = listOf(2, 4, 8)
+        val labels = listOf(
+            "2 spaces (Prettier Default)",
+            "4 spaces",
+            "8 spaces"
+        )
+        val checked = widths.indexOf(settings.prettierTabWidth).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Tab Width (--tab-width)",
+            subtitle = "Spaces per indentation level",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierTabWidth = widths[which]
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierTrailingCommaPicker() {
+        val values = listOf("es5", "all", "none")
+        val labels = listOf(
+            "es5 — Trailing commas where valid in ES5 (objects, arrays)",
+            "all — Trailing commas wherever possible (including function args)",
+            "none — No trailing commas"
+        )
+        val checked = values.indexOf(settings.prettierTrailingComma).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Trailing Commas (--trailing-comma)",
+            subtitle = "Control multi-line trailing comma insertion",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierTrailingComma = values[which]
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierArrowParensPicker() {
+        val values = listOf("always", "avoid")
+        val labels = listOf(
+            "always — Always include parens: (x) => x",
+            "avoid — Omit parens when possible: x => x"
+        )
+        val checked = values.indexOf(settings.prettierArrowParens).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Arrow Function Parentheses",
+            subtitle = "Parentheses around a sole arrow function parameter",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierArrowParens = values[which]
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierEolPicker() {
+        val values = listOf("lf", "crlf", "auto")
+        val labels = listOf(
+            "lf — Line Feed only (\\n, Linux/macOS standard)",
+            "crlf — Carriage Return + Line Feed (\\r\\n)",
+            "auto — Maintain existing line endings"
+        )
+        val checked = values.indexOf(settings.prettierEndOfLine).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "End of Line (--end-of-line)",
+            subtitle = "Line ending flavor used by Prettier",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierEndOfLine = values[which]
+            refreshSummary()
+        }
+    }
+
+    private fun showPrettierProseWrapPicker() {
+        val values = listOf("preserve", "always", "never")
+        val labels = listOf(
+            "preserve — Respect existing Markdown line breaks (Default)",
+            "always — Wrap Markdown prose at Print Width",
+            "never — Unwrap Markdown prose into single lines"
+        )
+        val checked = values.indexOf(settings.prettierProseWrap).coerceAtLeast(0)
+        ModernUiHelper.showModernSingleChoiceDialog(
+            context = this,
+            title = "Markdown Prose Wrap (--prose-wrap)",
+            subtitle = "How Prettier wraps Markdown text",
+            items = labels,
+            checkedIndex = checked
+        ) { which ->
+            settings.prettierProseWrap = values[which]
             refreshSummary()
         }
     }
@@ -1051,5 +1470,7 @@ class SettingsActivity : AppCompatActivity() {
         const val PAGE_TERMINAL = 3
         const val PAGE_ENVIRONMENT = 4
         const val PAGE_SYSTEM = 5
+        const val PAGE_PRETTIER = 6
+        const val PAGE_PLUGINS = 7
     }
 }

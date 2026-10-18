@@ -98,6 +98,8 @@ class MainActivity : AppCompatActivity() {
     private var bottomPanelCustomHeightPx: Int = 0
     private var suppressBottomTabCallback: Boolean = false
     private var latestDiagnostics: List<LspManager.LspDiagnostic> = emptyList()
+    private var lastLspAnalyzedFileKey: String = ""
+    private var lastLspAnalyzedText: String = ""
 
     private val currentFile: OpenedFile?
         get() = openTabs.getOrNull(activeTabIndex)
@@ -145,6 +147,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ModernUiHelper.enableHighRefreshRate(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         settings = Settings(this)
@@ -168,7 +171,7 @@ class MainActivity : AppCompatActivity() {
 
         LspManager.onStdioDiagnosticsPublished = { fileName, _ ->
             if (currentFile?.displayName == fileName) {
-                runLspAnalysisForCurrentFile()
+                runLspAnalysisForCurrentFile(force = true, notifyStdioServer = false)
             }
         }
 
@@ -359,9 +362,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateEmptyStateVisibility() {
         val hasTabs = openTabs.isNotEmpty()
-        binding.editor.visibility = if (hasTabs) View.VISIBLE else View.GONE
-        binding.editorEmptyState.visibility = if (hasTabs) View.GONE else View.VISIBLE
-        if (!hasTabs) {
+        if (hasTabs) {
+            ModernUiHelper.animateCrossFade(binding.editor, binding.editorEmptyState, 180L)
+        } else {
+            ModernUiHelper.animateCrossFade(binding.editorEmptyState, binding.editor, 180L)
             binding.stickyScrollBar.visibility = View.GONE
         }
     }
@@ -378,6 +382,18 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.action_format_document -> {
                 formatCurrentDocument()
+                true
+            }
+            R.id.action_prettier -> {
+                startActivity(
+                    Intent(this, SettingsActivity::class.java).apply {
+                        putExtra(SettingsActivity.EXTRA_INITIAL_PAGE, SettingsActivity.PAGE_PRETTIER)
+                    }
+                )
+                true
+            }
+            R.id.action_plugins -> {
+                showPluginsDialogForCurrentFile()
                 true
             }
             R.id.action_lsp_refactor -> {
@@ -538,11 +554,7 @@ class MainActivity : AppCompatActivity() {
             bottomPanelTallMode = !bottomPanelTallMode
             val targetHeightDp = if (bottomPanelTallMode) 330 else 200
             bottomPanelCustomHeightPx = (targetHeightDp * density).roundToInt()
-            binding.bottomPanelContainer.layoutParams =
-                binding.bottomPanelContainer.layoutParams.apply {
-                    height = bottomPanelCustomHeightPx
-                }
-            binding.bottomPanelContainer.requestLayout()
+            ModernUiHelper.animateViewHeight(binding.bottomPanelContainer, bottomPanelCustomHeightPx, 220L)
         }
         binding.btnBottomSheetClose.setOnClickListener {
             bottomPanelExpanded = false
@@ -647,10 +659,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateBottomPanelVisibility() {
-        binding.bottomPanelContainer.visibility = if (bottomPanelExpanded) View.VISIBLE else View.GONE
-        binding.btnToggleBottomPanel.setImageResource(
-            if (bottomPanelExpanded) R.drawable.ic_chevron_down else R.drawable.ic_chevron_up
-        )
+        ModernUiHelper.animatePanelVisibility(binding.bottomPanelContainer, bottomPanelExpanded, slideOffsetDp = 16f, durationMs = 210L)
+        binding.btnToggleBottomPanel.animate()
+            .rotation(if (bottomPanelExpanded) 180f else 0f)
+            .setDuration(200L)
+            .setInterpolator(ModernUiHelper.SPRING_INTERPOLATOR)
+            .start()
 
         suppressBottomTabCallback = true
         binding.bottomSheetTabs.getTabAt(activeBottomTab)?.let { tab ->
@@ -763,7 +777,12 @@ class MainActivity : AppCompatActivity() {
         binding.stickyScrollBar.setBackgroundColor(chromeBg)
         binding.stickyScrollText.setTextColor(fgColor)
         binding.stickyScrollLineBadge.setTextColor(accentColor)
-        binding.editor.setBackgroundColor(surfaceBg)
+        binding.editor.setBackgroundColor(editorController.currentEditorBackgroundColor())
+        ModernUiHelper.applyUiFontToViewTree(
+            this,
+            binding.mainDrawerLayout,
+            skipViewIds = setOf(binding.editor.id, binding.stickyScrollText.id, binding.buildStdinInput.id)
+        )
         binding.statusBar.setBackgroundColor(chromeBg)
         binding.positionText.setTextColor(subtleColor)
         binding.encodingStatusText.setTextColor(subtleColor)
@@ -859,8 +878,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateKeyboardDockModeUi() {
-        binding.symbolInput.visibility = if (isEditDockMode) View.GONE else View.VISIBLE
-        binding.quickActionBar.visibility = if (isEditDockMode) View.VISIBLE else View.GONE
+        if (isEditDockMode) {
+            ModernUiHelper.animateCrossFade(binding.quickActionBar, binding.symbolInput, 170L)
+        } else {
+            ModernUiHelper.animateCrossFade(binding.symbolInput, binding.quickActionBar, 170L)
+        }
         binding.btnToggleDockMode.text = if (isEditDockMode) "EDIT ⇄" else "SYM ⇄"
         styleDockModeButton()
     }
@@ -893,7 +915,8 @@ class MainActivity : AppCompatActivity() {
 
         val tools = listOf(
             QuickToolIcon(R.drawable.ic_lsp, "Code Actions") { showLspCodeActionsDialog() },
-            QuickToolIcon(R.drawable.ic_format_align, "Format") { formatCurrentDocument() },
+            QuickToolIcon(R.drawable.ic_code, "Plugins") { showPluginsDialogForCurrentFile() },
+            QuickToolIcon(R.drawable.ic_format_align, "Prettier Format") { formatCurrentDocument() },
             QuickToolIcon(R.drawable.ic_comment, "Toggle Comment") {
                 editorController.toggleLineComment(currentFile?.displayName ?: "")
             },
@@ -940,29 +963,46 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun runLspAnalysisForCurrentFile() {
+    private fun runLspAnalysisForCurrentFile(
+        force: Boolean = false,
+        notifyStdioServer: Boolean = true
+    ) {
         val fileName = currentFile?.displayName ?: "untitled.txt"
+        val fileKey = currentFile?.localFile?.absolutePath ?: fileName
+        val text = binding.editor.text.toString()
+
+        if (!force && fileKey == lastLspAnalyzedFileKey && text == lastLspAnalyzedText) {
+            return
+        }
+        lastLspAnalyzedFileKey = fileKey
+        lastLspAnalyzedText = text
+
         val activeServer = LspManager.activeServerForFile(this, fileName)
         if (activeServer == null) {
-            latestDiagnostics = emptyList()
-            editorController.clearLspDiagnostics()
-            renderLspDiagnosticsPanel(emptyList())
+            if (latestDiagnostics.isNotEmpty() || force) {
+                latestDiagnostics = emptyList()
+                editorController.clearLspDiagnostics()
+                renderLspDiagnosticsPanel(emptyList())
+            }
             updateLspStatusBadgeUi(null, fileName)
             updateCodeAnalysisTabTitle(0)
             return
         }
 
-        val text = binding.editor.text.toString()
         val diags = LspManager.analyzeDocumentWithStdio(
             context = this,
             server = activeServer,
             fileName = fileName,
             text = text,
-            localFile = currentFile?.localFile
+            localFile = currentFile?.localFile,
+            notifyServer = notifyStdioServer
         )
+        val diagsChanged = force || diags != latestDiagnostics
         latestDiagnostics = diags
-        editorController.applyLspDiagnosticsToEditor(diags)
-        renderLspDiagnosticsPanel(diags)
+        if (diagsChanged) {
+            editorController.applyLspDiagnosticsToEditor(diags)
+            renderLspDiagnosticsPanel(diags)
+        }
         updateLspStatusBadgeUi(activeServer, fileName)
         updateCodeAnalysisTabTitle(diags.size)
     }
@@ -1162,8 +1202,14 @@ class MainActivity : AppCompatActivity() {
             suppressModifiedEvent = false
         }
 
+        binding.editor.alpha = 0.84f
+        binding.editor.animate()
+            .alpha(1f)
+            .setDuration(150L)
+            .setInterpolator(ModernUiHelper.SPRING_INTERPOLATOR)
+            .start()
         renderTabs()
-        runLspAnalysisForCurrentFile()
+        runLspAnalysisForCurrentFile(force = true, notifyStdioServer = true)
         updateStatusLine()
         updateStickyScrollHeader()
         if (activeSidebarTab == SIDEBAR_TAB_OUTLINE && binding.mainDrawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -1568,9 +1614,13 @@ class MainActivity : AppCompatActivity() {
             if (!tab.isSelected) tab.select()
         }
         suppressSidebarTabCallback = false
-        binding.sidebarFilesPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_FILES) View.VISIBLE else View.GONE
-        binding.sidebarGitPage.visibility = if (activeSidebarTab == SIDEBAR_TAB_GIT) View.VISIBLE else View.GONE
-        binding.sidebarOutlinePage.visibility = if (activeSidebarTab == SIDEBAR_TAB_OUTLINE) View.VISIBLE else View.GONE
+        val sidebarPages = listOf(binding.sidebarFilesPage, binding.sidebarGitPage, binding.sidebarOutlinePage)
+        val targetSidebarPage = when (activeSidebarTab) {
+            SIDEBAR_TAB_GIT -> binding.sidebarGitPage
+            SIDEBAR_TAB_OUTLINE -> binding.sidebarOutlinePage
+            else -> binding.sidebarFilesPage
+        }
+        ModernUiHelper.animatePageSwitch(sidebarPages, targetSidebarPage, forward = true, durationMs = 190L)
         refreshActiveSidebarPage()
     }
 
@@ -2778,7 +2828,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateSearchModeUi() {
         val showReplace = isReplaceRowExpanded && !isProjectSearchMode
-        binding.replaceRow.visibility = if (showReplace) View.VISIBLE else View.GONE
+        ModernUiHelper.animatePanelVisibility(binding.replaceRow, showReplace, slideOffsetDp = 8f, durationMs = 170L)
         binding.btnToggleReplaceRow.visibility = if (isProjectSearchMode) View.GONE else View.VISIBLE
         binding.btnToggleReplaceRow.setImageResource(
             if (showReplace) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
@@ -2800,13 +2850,13 @@ class MainActivity : AppCompatActivity() {
     private fun showFindBar(projectScope: Boolean) {
         isProjectSearchMode = projectScope
         updateSearchModeUi()
-        binding.findBar.visibility = View.VISIBLE
+        ModernUiHelper.animatePanelVisibility(binding.findBar, true, slideOffsetDp = -10f, durationMs = 190L)
         binding.searchInput.requestFocus()
         commitSearch()
     }
 
     private fun hideFindBar() {
-        binding.findBar.visibility = View.GONE
+        ModernUiHelper.animatePanelVisibility(binding.findBar, false, slideOffsetDp = -10f, durationMs = 170L)
         binding.editor.searcher.stopSearch()
         binding.searchInput.setText("")
     }
@@ -2948,10 +2998,43 @@ class MainActivity : AppCompatActivity() {
             updateStickyScrollHeader()
         }
         binding.editor.subscribeAlways<ContentChangeEvent> { event ->
-            if (!suppressModifiedEvent && event.action != ContentChangeEvent.ACTION_SET_NEW_TEXT) {
+            val isCharAddedOrRemoved = event.action == ContentChangeEvent.ACTION_INSERT ||
+                event.action == ContentChangeEvent.ACTION_DELETE
+            if (!suppressModifiedEvent && isCharAddedOrRemoved) {
+                if (event.action == ContentChangeEvent.ACTION_INSERT &&
+                    event.changedText.length == 1 &&
+                    PluginManager.isEnabled(this, "auto-close-pairs")
+                ) {
+                    val ch = event.changedText[0]
+                    val closing = when (ch) {
+                        '(' -> ")"
+                        '[' -> "]"
+                        '"' -> "\""
+                        '\'' -> "'"
+                        '`' -> "`"
+                        else -> null
+                    }
+                    if (closing != null) {
+                        val line = event.changeEnd.line
+                        val col = event.changeEnd.column
+                        val lineStr = runCatching { binding.editor.text.getLineString(line) }.getOrDefault("")
+                        val nextCh = lineStr.getOrNull(col)
+                        if (nextCh == null || nextCh.isWhitespace() || nextCh in listOf(')', ']', '}', ',', ';')) {
+                            suppressModifiedEvent = true
+                            try {
+                                binding.editor.text.insert(line, col, closing)
+                                binding.editor.setSelection(line, col)
+                            } finally {
+                                suppressModifiedEvent = false
+                            }
+                        }
+                    }
+                }
+
+                val currentBuffer = binding.editor.text.toString()
                 val tab = currentFile
-                if (tab != null) {
-                    tab.content = binding.editor.text.toString()
+                if (tab != null && tab.content != currentBuffer) {
+                    tab.content = currentBuffer
                     if (!tab.modified) {
                         tab.modified = true
                         renderTabs()
@@ -2961,7 +3044,7 @@ class MainActivity : AppCompatActivity() {
                     autoSaveHandler.removeCallbacks(autoSaveRunnable)
                     autoSaveHandler.postDelayed(autoSaveRunnable, settings.autoSaveDelayMs.toLong())
                 }
-                runLspAnalysisForCurrentFile()
+                runLspAnalysisForCurrentFile(force = false, notifyStdioServer = true)
             }
             updateStatusLine()
         }
@@ -3028,7 +3111,24 @@ class MainActivity : AppCompatActivity() {
     private fun writeTabToStorage(tab: OpenedFile, showToast: Boolean = true): Boolean {
         return try {
             if (tab === currentFile) {
-                tab.content = binding.editor.text.toString()
+                val rawBuf = binding.editor.text.toString()
+                val processed = PluginManager.applyPreSaveHooks(this, tab.displayName, rawBuf)
+                if (processed != rawBuf) {
+                    val curLine = binding.editor.cursor.leftLine
+                    val curCol = binding.editor.cursor.leftColumn
+                    suppressModifiedEvent = true
+                    try {
+                        binding.editor.setText(processed)
+                        val safeL = curLine.coerceIn(0, (binding.editor.text.lineCount - 1).coerceAtLeast(0))
+                        val maxC = binding.editor.text.getLineString(safeL).length
+                        binding.editor.setSelection(safeL, curCol.coerceIn(0, maxC))
+                    } finally {
+                        suppressModifiedEvent = false
+                    }
+                }
+                tab.content = processed
+            } else {
+                tab.content = PluginManager.applyPreSaveHooks(this, tab.displayName, tab.content)
             }
             val local = tab.localFile
             val targetUri = tab.uri
@@ -3201,6 +3301,46 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(this, "Formatted with $label", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showPluginsDialogForCurrentFile() {
+        val current = currentFile
+        val fileName = current?.displayName ?: "untitled.kt"
+        val currentText = binding.editor.text.toString()
+        val cursorLine0 = binding.editor.cursor.leftLine
+        PluginManager.showEditorPluginsBottomSheet(
+            context = this,
+            fileName = fileName,
+            currentText = currentText,
+            cursorLine0 = cursorLine0,
+            localFile = current?.localFile,
+            onReplaceEditorText = { updatedText ->
+                if (updatedText != currentText) {
+                    val safeLine = cursorLine0.coerceIn(0, (updatedText.lines().size - 1).coerceAtLeast(0))
+                    binding.editor.setText(updatedText)
+                    binding.editor.setSelection(safeLine, 0)
+                    current?.content = updatedText
+                    current?.modified = true
+                    renderTabs()
+                    runLspAnalysisForCurrentFile(force = true)
+                }
+            },
+            onInsertAtCursor = { snippet ->
+                val cur = binding.editor.cursor
+                binding.editor.text.insert(cur.leftLine, cur.leftColumn, snippet)
+                runLspAnalysisForCurrentFile(force = true)
+            },
+            onJumpToLine = { line1, col0 ->
+                jumpToPosition(line1, col0)
+            },
+            onOpenPluginsSettings = {
+                startActivity(
+                    Intent(this, SettingsActivity::class.java).apply {
+                        putExtra(SettingsActivity.EXTRA_INITIAL_PAGE, SettingsActivity.PAGE_PLUGINS)
+                    }
+                )
+            }
+        )
     }
 
     private fun showLspCodeActionsDialog() {

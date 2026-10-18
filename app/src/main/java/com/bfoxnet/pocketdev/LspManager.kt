@@ -986,11 +986,14 @@ object LspManager {
                 flaggedRangesOnLine.add(memberRange)
                 val afterMember = maskedLine.substring((memberRange.last + 1).coerceAtMost(maskedLine.length)).trimStart()
                 val isCall = afterMember.startsWith("(") || afterMember.startsWith("{")
+                val suggestedMember = MEMBER_TYPO_SUGGESTIONS[member]
                 out.add(
                     LspDiagnostic(
                         serverId = serverId,
                         severity = Severity.ERROR,
-                        message = if (isCall) {
+                        message = if (suggestedMember != null) {
+                            "Unresolved member '$member' on '$recv'. Did you mean '$suggestedMember'?"
+                        } else if (isCall) {
                             "Unresolved member function: '$member' on '$recv'."
                         } else {
                             "Unresolved member property: '$member' on '$recv'."
@@ -1000,7 +1003,9 @@ object LspManager {
                         startCol = memberRange.first,
                         endCol = memberRange.last + 1,
                         startOffset = lineOffset + memberRange.first,
-                        endOffset = lineOffset + memberRange.last + 1
+                        endOffset = lineOffset + memberRange.last + 1,
+                        quickFixTitle = suggestedMember?.let { "Replace '$member' with '$it'" },
+                        quickFixReplacement = suggestedMember
                     )
                 )
             }
@@ -1627,6 +1632,26 @@ object LspManager {
         "Add", "Remove", "Clear", "ContainsKey", "TryGetValue", "Select", "Where", "FirstOrDefault", "SingleOrDefault", "ToList", "ToArray", "OrderBy", "OrderByDescending", "GroupBy", "Any", "All", "Count", "Sum"
     )
 
+    private val MEMBER_TYPO_SUGGESTIONS = mapOf(
+        "tog" to "log",
+        "lg" to "log",
+        "lgo" to "log",
+        "loog" to "log",
+        "wran" to "warn",
+        "eror" to "error",
+        "errr" to "error",
+        "pritnln" to "println",
+        "pirntln" to "println",
+        "pritn" to "print",
+        "lengh" to "length",
+        "lenght" to "length",
+        "toStirng" to "toString",
+        "tostr" to "toString",
+        "fiter" to "filter",
+        "forEcah" to "forEach",
+        "incudes" to "includes"
+    )
+
     private val COMMON_TYPOS_DEFAULT = mapOf(
         "retrun" to "return",
         "funtion" to "function",
@@ -1781,15 +1806,29 @@ object LspManager {
      * when installed in Ubuntu PRoot, and combines live `textDocument/publishDiagnostics` with the
      * fast multi-pass analyzer.
      */
+    private val lastAnalyzedTextByFile = ConcurrentHashMap<String, String>()
+    private val lastFastDiagsByFile = ConcurrentHashMap<String, List<LspDiagnostic>>()
+
     fun analyzeDocumentWithStdio(
         context: Context,
         server: LspServerSpec,
         fileName: String,
         text: String,
-        localFile: File? = null
+        localFile: File? = null,
+        notifyServer: Boolean = true
     ): List<LspDiagnostic> {
-        val fastDiags = analyzeDocument(server, fileName, text)
-        if (UbuntuProotManager.isUbuntuInstalled(context) && isServerBinaryPresentInRootfs(context, server)) {
+        val cacheKey = "${server.id}:$fileName"
+        val prevText = lastAnalyzedTextByFile[cacheKey]
+        val textChanged = prevText != text
+        val fastDiags = if (!textChanged && lastFastDiagsByFile.containsKey(cacheKey)) {
+            lastFastDiagsByFile[cacheKey]!!
+        } else {
+            analyzeDocument(server, fileName, text).also {
+                lastAnalyzedTextByFile[cacheKey] = text
+                lastFastDiagsByFile[cacheKey] = it
+            }
+        }
+        if (notifyServer && textChanged && UbuntuProotManager.isUbuntuInstalled(context) && isServerBinaryPresentInRootfs(context, server)) {
             Thread {
                 runCatching {
                     val session = getOrStartStdioSession(context.applicationContext, server)
@@ -1854,6 +1893,7 @@ object LspManager {
         private val nextRequestId = AtomicInteger(1)
         private val pendingRequests = ConcurrentHashMap<Int, PendingRpcCall>()
         private val openedDocVersions = ConcurrentHashMap<String, Int>()
+        private val lastSentDocText = ConcurrentHashMap<String, String>()
         private val transcriptLog = ArrayDeque<String>(64)
 
         @Volatile
@@ -2115,6 +2155,8 @@ object LspManager {
         fun notifyDocumentChanged(fileName: String, text: String, localFile: File?) {
             if (!initialized || !isAlive()) return
             val uri = guestUriForFile(fileName, localFile)
+            if (lastSentDocText[uri] == text) return
+            lastSentDocText[uri] = text
             val prevVer = openedDocVersions[uri]
             if (prevVer == null) {
                 openedDocVersions[uri] = 1

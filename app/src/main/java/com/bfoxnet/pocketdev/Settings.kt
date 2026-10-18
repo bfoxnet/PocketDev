@@ -5,8 +5,9 @@ import android.content.SharedPreferences
 
 /**
  * App settings backed by SharedPreferences. Persists editor preferences,
- * font ligatures, word-match highlighting, code folding, sticky-scroll headers,
- * Auto-Save & Save-All behavior, active project directory inside the Ubuntu rootfs
+ * UI font family, 15+ monospace editor fonts, font ligatures, word-match highlighting,
+ * code folding, sticky-scroll headers, Auto-Save & Save-All behavior, Prettier code
+ * formatter configuration, Plugins state, active project directory inside the Ubuntu rootfs
  * (`/root/projects/<name>`), Termux terminal style/cursor/toolbar/sticky-Ctrl/wake-lock
  * and extra-key haptic feedback states, default Linux shell (`zsh` with `robbyrussell`
  * theme and plugins, or `bash`), first-run onboarding state, and Language Server Protocol (LSP) states.
@@ -16,15 +17,20 @@ class Settings(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("pocketdev", Context.MODE_PRIVATE)
 
-    /** Editor color scheme id. */
+    /** Editor color scheme id (applies ONLY to the code editor canvas, not the whole app UI). */
     var editorTheme: String
         get() = prefs.getString(KEY_EDITOR_THEME, "darcula") ?: "darcula"
         set(value) = prefs.edit().putString(KEY_EDITOR_THEME, value).apply()
 
-    /** Font family id, resolved against [FONTS]. */
+    /** Editor monospace font family id, resolved against [FONTS]. */
     var fontFamily: String
         get() = prefs.getString(KEY_FONT_FAMILY, FONTS.first().id) ?: FONTS.first().id
         set(value) = prefs.edit().putString(KEY_FONT_FAMILY, value).apply()
+
+    /** App UI font family id, resolved against [UI_FONTS]. */
+    var uiFontFamily: String
+        get() = prefs.getString(KEY_UI_FONT_FAMILY, UI_FONTS.first().id) ?: UI_FONTS.first().id
+        set(value) = prefs.edit().putString(KEY_UI_FONT_FAMILY, value).apply()
 
     /** Editor text size in sp. */
     var fontSizeSp: Int
@@ -70,6 +76,99 @@ class Settings(context: Context) {
     var saveAllOnSavePress: Boolean
         get() = prefs.getBoolean(KEY_SAVE_ALL_ON_SAVE_PRESS, true)
         set(value) = prefs.edit().putBoolean(KEY_SAVE_ALL_ON_SAVE_PRESS, value).apply()
+
+    // ---------------------------------------------------------------- Prettier Formatter Settings
+
+    /** Whether Prettier is enabled as the default code formatter. */
+    var prettierEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_ENABLED, value).apply()
+
+    /** Automatically run Prettier when saving a document. */
+    var prettierFormatOnSave: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_FORMAT_ON_SAVE, false)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_FORMAT_ON_SAVE, value).apply()
+
+    /** Prettier `--print-width` (line length that Prettier will wrap on). */
+    var prettierPrintWidth: Int
+        get() = prefs.getInt(KEY_PRETTIER_PRINT_WIDTH, 80)
+        set(value) = prefs.edit().putInt(KEY_PRETTIER_PRINT_WIDTH, value.coerceIn(40, 200)).apply()
+
+    /** Prettier `--tab-width` (spaces per indentation level). */
+    var prettierTabWidth: Int
+        get() = prefs.getInt(KEY_PRETTIER_TAB_WIDTH, 2)
+        set(value) = prefs.edit().putInt(KEY_PRETTIER_TAB_WIDTH, value.coerceIn(1, 8)).apply()
+
+    /** Prettier `--use-tabs` (indent lines with tabs instead of spaces). */
+    var prettierUseTabs: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_USE_TABS, false)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_USE_TABS, value).apply()
+
+    /** Prettier `--semi` / `--no-semi` (print semicolons at the ends of statements). */
+    var prettierSemi: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_SEMI, true)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_SEMI, value).apply()
+
+    /** Prettier `--single-quote` (use single quotes instead of double quotes). */
+    var prettierSingleQuote: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_SINGLE_QUOTE, false)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_SINGLE_QUOTE, value).apply()
+
+    /** Prettier `--jsx-single-quote` (use single quotes instead of double quotes in JSX). */
+    var prettierJsxSingleQuote: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_JSX_SINGLE_QUOTE, false)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_JSX_SINGLE_QUOTE, value).apply()
+
+    /** Prettier `--trailing-comma` ("es5", "all", "none"). */
+    var prettierTrailingComma: String
+        get() = prefs.getString(KEY_PRETTIER_TRAILING_COMMA, "es5") ?: "es5"
+        set(value) = prefs.edit().putString(KEY_PRETTIER_TRAILING_COMMA, value).apply()
+
+    /** Prettier `--bracket-spacing` (print spaces between brackets in object literals `{ foo: bar }`). */
+    var prettierBracketSpacing: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_BRACKET_SPACING, true)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_BRACKET_SPACING, value).apply()
+
+    /** Prettier `--bracket-same-line` (put `>` of multi-line HTML/JSX element at the end of the last line). */
+    var prettierBracketSameLine: Boolean
+        get() = prefs.getBoolean(KEY_PRETTIER_BRACKET_SAME_LINE, false)
+        set(value) = prefs.edit().putBoolean(KEY_PRETTIER_BRACKET_SAME_LINE, value).apply()
+
+    /** Prettier `--arrow-parens` ("always" or "avoid"). */
+    var prettierArrowParens: String
+        get() = prefs.getString(KEY_PRETTIER_ARROW_PARENS, "always") ?: "always"
+        set(value) = prefs.edit().putString(KEY_PRETTIER_ARROW_PARENS, value).apply()
+
+    /** Prettier `--end-of-line` ("lf", "crlf", "auto"). */
+    var prettierEndOfLine: String
+        get() = prefs.getString(KEY_PRETTIER_END_OF_LINE, "lf") ?: "lf"
+        set(value) = prefs.edit().putString(KEY_PRETTIER_END_OF_LINE, value).apply()
+
+    /** Prettier `--prose-wrap` ("always", "never", "preserve"). */
+    var prettierProseWrap: String
+        get() = prefs.getString(KEY_PRETTIER_PROSE_WRAP, "preserve") ?: "preserve"
+        set(value) = prefs.edit().putString(KEY_PRETTIER_PROSE_WRAP, value).apply()
+
+    fun resetPrettierDefaults() {
+        prefs.edit()
+            .putBoolean(KEY_PRETTIER_ENABLED, true)
+            .putBoolean(KEY_PRETTIER_FORMAT_ON_SAVE, false)
+            .putInt(KEY_PRETTIER_PRINT_WIDTH, 80)
+            .putInt(KEY_PRETTIER_TAB_WIDTH, 2)
+            .putBoolean(KEY_PRETTIER_USE_TABS, false)
+            .putBoolean(KEY_PRETTIER_SEMI, true)
+            .putBoolean(KEY_PRETTIER_SINGLE_QUOTE, false)
+            .putBoolean(KEY_PRETTIER_JSX_SINGLE_QUOTE, false)
+            .putString(KEY_PRETTIER_TRAILING_COMMA, "es5")
+            .putBoolean(KEY_PRETTIER_BRACKET_SPACING, true)
+            .putBoolean(KEY_PRETTIER_BRACKET_SAME_LINE, false)
+            .putString(KEY_PRETTIER_ARROW_PARENS, "always")
+            .putString(KEY_PRETTIER_END_OF_LINE, "lf")
+            .putString(KEY_PRETTIER_PROSE_WRAP, "preserve")
+            .apply()
+    }
+
+    // ---------------------------------------------------------------- Workspace & Terminal State
 
     /** Persistent SAF DocumentTree URI string (legacy import fallback). */
     var projectTreeUri: String?
@@ -208,9 +307,18 @@ class Settings(context: Context) {
         prefs.edit().putBoolean("$KEY_LSP_ENABLED_PREFIX$serverId", enabled).apply()
     }
 
+    /** Returns true if the given IDE plugin [pluginId] is enabled. */
+    fun isPluginEnabled(pluginId: String, defaultEnabled: Boolean = true): Boolean =
+        prefs.getBoolean("$KEY_PLUGIN_ENABLED_PREFIX$pluginId", defaultEnabled)
+
+    fun setPluginEnabled(pluginId: String, enabled: Boolean) {
+        prefs.edit().putBoolean("$KEY_PLUGIN_ENABLED_PREFIX$pluginId", enabled).apply()
+    }
+
     companion object {
         private const val KEY_EDITOR_THEME = "editor_theme"
         private const val KEY_FONT_FAMILY = "font_family"
+        private const val KEY_UI_FONT_FAMILY = "ui_font_family"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_WORD_WRAP = "word_wrap"
         private const val KEY_FONT_LIGATURES = "font_ligatures"
@@ -220,6 +328,20 @@ class Settings(context: Context) {
         private const val KEY_AUTO_SAVE_ENABLED = "auto_save_enabled"
         private const val KEY_AUTO_SAVE_DELAY_MS = "auto_save_delay_ms"
         private const val KEY_SAVE_ALL_ON_SAVE_PRESS = "save_all_on_save_press"
+        private const val KEY_PRETTIER_ENABLED = "prettier_enabled"
+        private const val KEY_PRETTIER_FORMAT_ON_SAVE = "prettier_format_on_save"
+        private const val KEY_PRETTIER_PRINT_WIDTH = "prettier_print_width"
+        private const val KEY_PRETTIER_TAB_WIDTH = "prettier_tab_width"
+        private const val KEY_PRETTIER_USE_TABS = "prettier_use_tabs"
+        private const val KEY_PRETTIER_SEMI = "prettier_semi"
+        private const val KEY_PRETTIER_SINGLE_QUOTE = "prettier_single_quote"
+        private const val KEY_PRETTIER_JSX_SINGLE_QUOTE = "prettier_jsx_single_quote"
+        private const val KEY_PRETTIER_TRAILING_COMMA = "prettier_trailing_comma"
+        private const val KEY_PRETTIER_BRACKET_SPACING = "prettier_bracket_spacing"
+        private const val KEY_PRETTIER_BRACKET_SAME_LINE = "prettier_bracket_same_line"
+        private const val KEY_PRETTIER_ARROW_PARENS = "prettier_arrow_parens"
+        private const val KEY_PRETTIER_END_OF_LINE = "prettier_end_of_line"
+        private const val KEY_PRETTIER_PROSE_WRAP = "prettier_prose_wrap"
         private const val KEY_PROJECT_TREE_URI = "project_tree_uri"
         private const val KEY_PROJECT_MODE = "project_mode"
         private const val KEY_LOCAL_PROJECT_PATH = "local_project_path"
@@ -246,21 +368,114 @@ class Settings(context: Context) {
         private const val KEY_VM_ARCH = "vm_arch"
         private const val KEY_LSP_INSTALLED_PREFIX = "lsp_installed_"
         private const val KEY_LSP_ENABLED_PREFIX = "lsp_enabled_"
+        private const val KEY_PLUGIN_ENABLED_PREFIX = "plugin_enabled_"
 
         const val SHELL_ZSH = "zsh"
         const val SHELL_BASH = "bash"
         const val DEFAULT_ZSH_THEME = "robbyrussell"
 
-        /** Bundled monospace fonts: stable id -> resource + display name. */
+        /** Bundled monospace editor fonts: stable id -> resource + display name. */
         val FONTS = listOf(
             Font("jetbrains_mono", R.font.jetbrains_mono, "JetBrains Mono"),
             Font("fira_code", R.font.fira_code, "Fira Code"),
+            Font("cascadia_code", R.font.cascadia_code, "Cascadia Code"),
+            Font("monaspace", R.font.monaspace, "Monaspace"),
+            Font("geist_mono", R.font.geist_mono, "Geist Mono"),
+            Font("source_code_pro", R.font.source_code_pro, "Source Code Pro"),
+            Font("monolisa", R.font.monolisa, "MonoLisa"),
+            Font("intel_one_mono", R.font.intel_one_mono, "Intel One Mono"),
+            Font("hack", R.font.hack, "Hack"),
+            Font("consolas", R.font.consolas, "Consolas"),
+            Font("ubuntu_sans_mono", R.font.ubuntu_sans_mono, "Ubuntu Sans Mono"),
+            Font("inconsolata", R.font.inconsolata, "Inconsolata"),
+            Font("lilex", R.font.lilex, "Lilex"),
+            Font("input_mono", R.font.input_mono, "Input Mono"),
+            Font("datatype", R.font.datatype, "Datatype"),
             Font("google_sans_code", R.font.google_sans_code, "Google Sans Code"),
             Font("roboto_mono", R.font.roboto_mono, "Roboto Mono"),
         )
 
+        /** Multiple UI Font System families (4 weights each). */
+        val UI_FONTS = listOf(
+            UiFont(
+                id = "plus_jakarta_sans",
+                label = "Plus Jakarta Sans",
+                regularRes = R.font.plus_jakarta_sans,
+                mediumRes = R.font.plus_jakarta_sans_medium,
+                semiBoldRes = R.font.plus_jakarta_sans_semibold,
+                boldRes = R.font.plus_jakarta_sans_bold
+            ),
+            UiFont(
+                id = "google_sans",
+                label = "Google Sans",
+                regularRes = R.font.google_sans,
+                mediumRes = R.font.google_sans_medium,
+                semiBoldRes = R.font.google_sans_semibold,
+                boldRes = R.font.google_sans_bold
+            ),
+            UiFont(
+                id = "inter",
+                label = "Inter",
+                regularRes = R.font.inter,
+                mediumRes = R.font.inter_medium,
+                semiBoldRes = R.font.inter_semibold,
+                boldRes = R.font.inter_bold
+            ),
+            UiFont(
+                id = "geist",
+                label = "Geist",
+                regularRes = R.font.geist,
+                mediumRes = R.font.geist_medium,
+                semiBoldRes = R.font.geist_semibold,
+                boldRes = R.font.geist_bold
+            ),
+            UiFont(
+                id = "noto_sans",
+                label = "Noto Sans",
+                regularRes = R.font.noto_sans,
+                mediumRes = R.font.noto_sans_medium,
+                semiBoldRes = R.font.noto_sans_semibold,
+                boldRes = R.font.noto_sans_bold
+            ),
+            UiFont(
+                id = "dm_sans",
+                label = "DM Sans",
+                regularRes = R.font.dm_sans,
+                mediumRes = R.font.dm_sans_medium,
+                semiBoldRes = R.font.dm_sans_semibold,
+                boldRes = R.font.dm_sans_bold
+            ),
+            UiFont(
+                id = "rubik",
+                label = "Rubik",
+                regularRes = R.font.rubik,
+                mediumRes = R.font.rubik_medium,
+                semiBoldRes = R.font.rubik_semibold,
+                boldRes = R.font.rubik_bold
+            ),
+            UiFont(
+                id = "outfit",
+                label = "Outfit",
+                regularRes = R.font.outfit,
+                mediumRes = R.font.outfit_medium,
+                semiBoldRes = R.font.outfit_semibold,
+                boldRes = R.font.outfit_bold
+            )
+        )
+
         fun fontById(id: String): Font = FONTS.firstOrNull { it.id == id } ?: FONTS.first()
 
+        fun uiFontById(id: String): UiFont = UI_FONTS.firstOrNull { it.id == id } ?: UI_FONTS.first()
+
         data class Font(val id: String, val resId: Int, val label: String)
+
+        data class UiFont(
+            val id: String,
+            val label: String,
+            val regularRes: Int,
+            val mediumRes: Int,
+            val semiBoldRes: Int,
+            val boldRes: Int
+        )
     }
 }
