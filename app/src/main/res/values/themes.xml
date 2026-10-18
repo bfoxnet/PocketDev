@@ -2,8 +2,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.PocketDev" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
-        <item name="colorOnPrimary">@color/surface</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/on_primary</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorSurfaceContainer">@color/surface_container</item>
         <item name="colorSurfaceContainerHigh">@color/surface_container_high</item>
@@ -17,7 +18,11 @@
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/light_status</item>
         <item name="actionMenuTextColor">@color/on_surface</item>
 
-        <!-- Compact, modern Three-Dot Overflow & Popup Menu styling (smaller font & compact rows) -->
+        <!-- Plus Jakarta Sans as global App UI typeface (Code Editor uses its own monospace font) -->
+        <item name="android:fontFamily">@font/plus_jakarta_sans</item>
+        <item name="fontFamily">@font/plus_jakarta_sans</item>
+
+        <!-- Compact, modern Three-Dot Overflow & Popup Menu styling -->
         <item name="popupMenuStyle">@style/PocketDev.PopupMenu</item>
         <item name="android:popupMenuStyle">@style/PocketDev.PopupMenu</item>
         <item name="actionOverflowMenuStyle">@style/PocketDev.OverflowMenu</item>
@@ -25,15 +30,16 @@
         <item name="textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
         <item name="android:textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
         <item name="android:textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
-        <item name="listPreferredItemHeightSmall">36dp</item>
-        <item name="android:listPreferredItemHeightSmall">36dp</item>
+        <item name="listPreferredItemHeightSmall">38dp</item>
+        <item name="android:listPreferredItemHeightSmall">38dp</item>
     </style>
 
-    <!-- Compact 12.5sp typography for Three-Dot Overflow Menu & Popup Menus -->
+    <!-- Plus Jakarta Sans Medium typography for Three-Dot Overflow Menu & Popup Menus -->
     <style name="PocketDev.PopupMenuTextAppearance" parent="TextAppearance.Material3.BodySmall">
-        <item name="android:textSize">12.5sp</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:textColor">@color/on_surface</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_medium</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_medium</item>
     </style>
 
     <style name="PocketDev.PopupMenu" parent="Widget.Material3.PopupMenu">
@@ -46,23 +52,27 @@
         <item name="android:dropDownVerticalOffset">4dp</item>
     </style>
 
-    <!-- Compact Toolbar Title & Subtitle TextAppearances (fixes oversized subtitle on DiagActivity & toolbars) -->
+    <!-- Compact Toolbar Title & Subtitle TextAppearances -->
     <style name="PocketDev.ToolbarTitle" parent="TextAppearance.Material3.TitleSmall">
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">14.5sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_bold</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_bold</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
 
     <style name="PocketDev.ToolbarSubtitle" parent="TextAppearance.Material3.LabelSmall">
-        <item name="android:textSize">10.5sp</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans</item>
+        <item name="fontFamily">@font/plus_jakarta_sans</item>
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
 
-    <!-- Compact Top MaterialToolbar Style (Row 1 of AppBarLayout) -->
+    <!-- Compact Top MaterialToolbar Style -->
     <style name="AndroidIDE.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="android:minHeight">44dp</item>
+        <item name="android:minHeight">46dp</item>
         <item name="titleTextAppearance">@style/PocketDev.ToolbarTitle</item>
         <item name="subtitleTextAppearance">@style/PocketDev.ToolbarSubtitle</item>
         <item name="contentInsetStartWithNavigation">0dp</item>
@@ -78,11 +88,11 @@
         <item name="textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
         <item name="android:textAppearanceLargePopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
         <item name="android:textAppearanceSmallPopupMenu">@style/PocketDev.PopupMenuTextAppearance</item>
-        <item name="listPreferredItemHeightSmall">36dp</item>
-        <item name="android:listPreferredItemHeightSmall">36dp</item>
+        <item name="listPreferredItemHeightSmall">38dp</item>
+        <item name="android:listPreferredItemHeightSmall">38dp</item>
     </style>
 
-    <!-- File TabLayout Style (Row 2 of AppBarLayout) -->
+    <!-- File TabLayout Style -->
     <style name="AndroidIDE.FileTabLayout" parent="Widget.Material3.TabLayout">
         <item name="tabMode">scrollable</item>
         <item name="tabGravity">start</item>
@@ -114,11 +124,15 @@
 
     <style name="AndroidIDE.TabTextAppearance" parent="TextAppearance.Material3.LabelMedium">
         <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_medium</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_medium</item>
         <item name="textAllCaps">false</item>
     </style>
 
     <style name="AndroidIDE.BottomSheetTabText" parent="TextAppearance.Material3.LabelMedium">
         <item name="android:textSize">11.5sp</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_medium</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_medium</item>
         <item name="textAllCaps">false</item>
     </style>
 
@@ -136,8 +150,10 @@
         <item name="android:gravity">center_vertical</item>
         <item name="android:paddingHorizontal">16dp</item>
         <item name="android:paddingVertical">12dp</item>
-        <item name="android:minHeight">54dp</item>
+        <item name="android:minHeight">56dp</item>
         <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_medium</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_medium</item>
     </style>
 
     <style name="PocketDev.PrefTitle" parent="TextAppearance.Material3.BodyMedium">
@@ -145,6 +161,8 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/on_surface</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_semibold</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_semibold</item>
     </style>
 
     <style name="PocketDev.PrefSubtitle" parent="TextAppearance.Material3.BodySmall">
@@ -152,6 +170,8 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/on_surface_variant</item>
         <item name="android:layout_marginTop">2dp</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans</item>
+        <item name="fontFamily">@font/plus_jakarta_sans</item>
     </style>
 
     <style name="PocketDev.PrefValue" parent="TextAppearance.Material3.LabelLarge">
@@ -159,5 +179,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/on_surface_variant</item>
         <item name="android:layout_marginStart">12dp</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_semibold</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_semibold</item>
     </style>
 </resources>

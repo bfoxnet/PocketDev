@@ -5,13 +5,13 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
@@ -22,25 +22,29 @@ import com.google.android.material.textview.MaterialTextView
 import kotlin.math.roundToInt
 
 /**
- * Organized PocketDev Settings screen with a Live Code Preview card, inline Font Size Slider,
- * and all Editor & Terminal controls promoted to first-class settings rows:
- * 1. Appearance (Live Code Preview Card, Color Scheme, Editor & Terminal Font, Inline Font Size Slider)
- * 2. Code Editor & Auto-Save (Auto-Save, Delay, Save All, Ligatures, Word Wrap, Sticky-Scroll, Word-Match Highlight, Code Folding)
- * 3. Terminal & Zsh Shell (Default Shell, Theme, Cursor, Haptic Feedback, Extra-Keys Toolbar, Sticky CTRL, Auto Wake-Lock, Keep Screen On, termux.properties)
- * 4. Ubuntu 24.04 LTS • PRoot & Zsh Environment (Host Architecture, Projects Dir, Zsh & Plugins, Rootfs Backup/Restore)
- * 5. Environment & Tools (Language Servers, Open Terminal)
- * 6. System & About (Editor Diagnostics, About PocketDev)
+ * Multi-page Settings experience for PocketDev:
+ * - Page 0 (`PAGE_HOME`): Clean category navigation hub (Appearance, Code Editor, Terminal,
+ *   Linux Environment, Language Servers, System & About).
+ * - Page 1 (`PAGE_APPEARANCE`): Live Code Preview, Color Theme, Editor Font, Font Size slider.
+ * - Page 2 (`PAGE_EDITOR`): Auto-Save, Auto-Save Delay, Save All, Ligatures, Word Wrap,
+ *   Sticky Scroll, Highlight Matching Words, Code Folding.
+ * - Page 3 (`PAGE_TERMINAL`): Default Shell, Color Theme, Cursor Style, Haptic Feedback,
+ *   Extra Keys Toolbar, Sticky Ctrl, Wake Lock, Keep Screen On, Terminal Properties.
+ * - Page 4 (`PAGE_ENVIRONMENT`): System Architecture, Workspace Directory, Zsh & Plugins,
+ *   Runtime & Backups, Language Servers, Open Terminal.
+ * - Page 5 (`PAGE_SYSTEM`): Task Notifications, Diagnostics, Welcome Guide, About PocketDev.
  */
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var settings: Settings
+    private var currentPage: Int = PAGE_HOME
 
     private val exportEnvBackupLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
             if (uri != null) {
-                binding.valueUbuntuSync.text = "Backing up..."
-                Toast.makeText(this, "Exporting Ubuntu 24.04 environment backup (.tar.gz)...", Toast.LENGTH_SHORT).show()
+                binding.valueUbuntuSync.text = "Exporting…"
+                Toast.makeText(this, "Exporting environment backup…", Toast.LENGTH_SHORT).show()
                 Thread {
                     val ok = try {
                         contentResolver.openOutputStream(uri)?.use { out ->
@@ -52,14 +56,14 @@ class SettingsActivity : AppCompatActivity() {
                             }
                         } ?: false
                     } catch (e: Exception) {
-                        DiagLogger.log("Backup", "SAF export failed: ${e.message}", this, e)
+                        DiagLogger.log("Backup", "Export failed: ${e.message}", this, e)
                         false
                     }
                     runOnUiThread {
                         refreshSummary()
                         Toast.makeText(
                             this,
-                            if (ok) "Environment backup exported to .tar.gz ✓" else "Environment backup failed",
+                            if (ok) "Backup exported" else "Backup failed",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -70,8 +74,8 @@ class SettingsActivity : AppCompatActivity() {
     private val importEnvBackupLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) {
-                binding.valueUbuntuSync.text = "Restoring..."
-                Toast.makeText(this, "Restoring Ubuntu 24.04 environment from backup...", Toast.LENGTH_SHORT).show()
+                binding.valueUbuntuSync.text = "Restoring…"
+                Toast.makeText(this, "Restoring environment from backup…", Toast.LENGTH_SHORT).show()
                 Thread {
                     val ok = try {
                         contentResolver.openInputStream(uri)?.use { ins ->
@@ -83,14 +87,14 @@ class SettingsActivity : AppCompatActivity() {
                             }
                         } ?: false
                     } catch (e: Exception) {
-                        DiagLogger.log("Restore", "SAF restore failed: ${e.message}", this, e)
+                        DiagLogger.log("Restore", "Restore failed: ${e.message}", this, e)
                         false
                     }
                     runOnUiThread {
                         refreshSummary()
                         Toast.makeText(
                             this,
-                            if (ok) "Ubuntu 24.04 + PRoot + Zsh restored from backup ✓" else "Restore failed — check archive format",
+                            if (ok) "Environment restored" else "Restore failed",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -104,16 +108,75 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(binding.root)
         settings = Settings(this)
 
+        currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE, PAGE_HOME)
+            ?: intent?.getIntExtra(EXTRA_INITIAL_PAGE, PAGE_HOME)
+            ?: PAGE_HOME
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (currentPage != PAGE_HOME) {
+                    navigateToPage(PAGE_HOME)
+                } else {
+                    isEnabled = false
+                    finish()
+                }
+            }
+        })
+
         setupInsets()
         setupListeners()
         applyThemeChrome()
         refreshSummary()
+        navigateToPage(currentPage)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_CURRENT_PAGE, currentPage)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
         super.onResume()
         applyThemeChrome()
         refreshSummary()
+    }
+
+    private fun navigateToPage(page: Int) {
+        currentPage = page
+        binding.pageHome.visibility = if (page == PAGE_HOME) View.VISIBLE else View.GONE
+        binding.pageAppearance.visibility = if (page == PAGE_APPEARANCE) View.VISIBLE else View.GONE
+        binding.pageEditor.visibility = if (page == PAGE_EDITOR) View.VISIBLE else View.GONE
+        binding.pageTerminal.visibility = if (page == PAGE_TERMINAL) View.VISIBLE else View.GONE
+        binding.pageEnvironment.visibility = if (page == PAGE_ENVIRONMENT) View.VISIBLE else View.GONE
+        binding.pageSystem.visibility = if (page == PAGE_SYSTEM) View.VISIBLE else View.GONE
+
+        when (page) {
+            PAGE_APPEARANCE -> {
+                binding.toolbar.title = "Appearance"
+                binding.toolbar.subtitle = "Theme, editor font, and text size"
+            }
+            PAGE_EDITOR -> {
+                binding.toolbar.title = "Code Editor"
+                binding.toolbar.subtitle = "Saving, formatting, and editor behavior"
+            }
+            PAGE_TERMINAL -> {
+                binding.toolbar.title = "Terminal"
+                binding.toolbar.subtitle = "Shell, color theme, cursor, and extra keys"
+            }
+            PAGE_ENVIRONMENT -> {
+                binding.toolbar.title = "Linux Environment"
+                binding.toolbar.subtitle = "Ubuntu 24.04 LTS, workspace, and backups"
+            }
+            PAGE_SYSTEM -> {
+                binding.toolbar.title = "System & About"
+                binding.toolbar.subtitle = "Diagnostics, notifications, and version info"
+            }
+            else -> {
+                binding.toolbar.title = getString(R.string.settings_title)
+                binding.toolbar.subtitle = null
+            }
+        }
+        binding.settingsScroll.scrollTo(0, 0)
     }
 
     private fun setupInsets() {
@@ -140,7 +203,7 @@ class SettingsActivity : AppCompatActivity() {
         val chrome = Color.parseColor(theme.ui.chromeBg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
         binding.settingsRoot.setBackgroundColor(chrome)
@@ -180,6 +243,7 @@ class SettingsActivity : AppCompatActivity() {
         headers.forEach { it.setTextColor(accent) }
 
         val cards = listOf(
+            binding.cardCategories,
             binding.cardAppearance,
             binding.cardEditor,
             binding.cardTerminal,
@@ -190,13 +254,39 @@ class SettingsActivity : AppCompatActivity() {
         cards.forEach { card: View ->
             card.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 12f * density
+                cornerRadius = 14f * density
                 setColor(chrome)
                 setStroke((1 * density).toInt().coerceAtLeast(1), subtle and 0x33FFFFFF)
             }
         }
 
+        val navIcons = listOf(
+            binding.iconNavAppearance,
+            binding.iconNavEditor,
+            binding.iconNavTerminal,
+            binding.iconNavEnvironment,
+            binding.iconNavLsp,
+            binding.iconNavSystem
+        )
+        navIcons.forEach { it.imageTintList = ColorStateList.valueOf(accent) }
+
+        val navChevrons = listOf(
+            binding.chevNavAppearance,
+            binding.chevNavEditor,
+            binding.chevNavTerminal,
+            binding.chevNavEnvironment,
+            binding.chevNavLsp,
+            binding.chevNavSystem
+        )
+        navChevrons.forEach { it.imageTintList = ColorStateList.valueOf(subtle) }
+
         val titles = listOf(
+            binding.navTitleAppearance,
+            binding.navTitleEditor,
+            binding.navTitleTerminal,
+            binding.navTitleEnvironment,
+            binding.navTitleLsp,
+            binding.navTitleSystem,
             binding.titleTheme,
             binding.titleFont,
             binding.titleFontSize,
@@ -213,11 +303,18 @@ class SettingsActivity : AppCompatActivity() {
             binding.titleLsp,
             binding.titleTerminal,
             binding.titleDiag,
+            binding.titleOnboarding,
             binding.titleAbout
         )
         titles.forEach { it.setTextColor(fg) }
 
         val subtitles = listOf(
+            binding.navSubAppearance,
+            binding.navSubEditor,
+            binding.navSubTerminal,
+            binding.navSubEnvironment,
+            binding.navSubLsp,
+            binding.navSubSystem,
             binding.subTheme,
             binding.subFont,
             binding.subFontSize,
@@ -234,6 +331,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.subLsp,
             binding.subTerminal,
             binding.subDiag,
+            binding.subOnboarding,
             binding.subAbout
         )
         subtitles.forEach { it.setTextColor(subtle) }
@@ -255,6 +353,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.valueLsp,
             binding.valueTerminal,
             binding.valueDiag,
+            binding.valueOnboarding,
             binding.valueAbout
         )
         values.forEach { it.setTextColor(accent) }
@@ -286,9 +385,11 @@ class SettingsActivity : AppCompatActivity() {
             binding.switchTerminalToolbar,
             binding.switchTerminalStickyCtrl,
             binding.switchTerminalAutoWakelock,
-            binding.switchTerminalKeepScreen
+            binding.switchTerminalKeepScreen,
+            binding.switchNotifications
         ).forEach { sw ->
             sw.setTextColor(fg)
+            sw.typeface = ModernUiHelper.appFontSemiBold(this)
             sw.thumbTintList = switchThumbStates
             sw.trackTintList = switchTrackStates
         }
@@ -308,9 +409,23 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setNavigationOnClickListener {
+            if (currentPage != PAGE_HOME) {
+                navigateToPage(PAGE_HOME)
+            } else {
+                finish()
+            }
+        }
 
-        // Section 1: Appearance & Inline Slider
+        // Category Hub Navigation
+        binding.navAppearance.setOnClickListener { navigateToPage(PAGE_APPEARANCE) }
+        binding.navEditor.setOnClickListener { navigateToPage(PAGE_EDITOR) }
+        binding.navTerminal.setOnClickListener { navigateToPage(PAGE_TERMINAL) }
+        binding.navEnvironment.setOnClickListener { navigateToPage(PAGE_ENVIRONMENT) }
+        binding.navLsp.setOnClickListener { startActivity(Intent(this, LspActivity::class.java)) }
+        binding.navSystem.setOnClickListener { navigateToPage(PAGE_SYSTEM) }
+
+        // Page 1: Appearance
         binding.rowTheme.setOnClickListener { showThemePicker() }
         binding.rowFont.setOnClickListener { showFontPicker() }
         binding.rowFontSize.setOnClickListener { showFontSizePicker() }
@@ -320,10 +435,11 @@ class SettingsActivity : AppCompatActivity() {
                 settings.fontSizeSp = value.roundToInt().coerceIn(10, 24)
                 binding.valueFontSize.text = getString(R.string.font_size_value, settings.fontSizeSp)
                 updateLivePreviewCard()
+                refreshCategorySummaries()
             }
         }
 
-        // Section 2: Code Editor & Auto-Save
+        // Page 2: Code Editor
         binding.switchAutoSave.isChecked = settings.autoSaveEnabled
         binding.switchAutoSave.setOnCheckedChangeListener { _, checked ->
             settings.autoSaveEnabled = checked
@@ -364,7 +480,7 @@ class SettingsActivity : AppCompatActivity() {
             settings.codeFoldingEnabled = checked
         }
 
-        // Section 3: Terminal & Zsh Shell
+        // Page 3: Terminal
         binding.rowDefaultShell.setOnClickListener { showDefaultShellPicker() }
         binding.rowTerminalStyle.setOnClickListener { showTerminalStylePicker() }
         binding.rowTerminalCursor.setOnClickListener { showTerminalCursorPicker() }
@@ -392,7 +508,7 @@ class SettingsActivity : AppCompatActivity() {
 
         binding.rowTermuxProps.setOnClickListener { showEditTermuxPropertiesDialog() }
 
-        // Section 4: Ubuntu 24.04 LTS • PRoot & Zsh Environment
+        // Page 4: Linux Environment
         binding.rowUbuntuArch.setOnClickListener { showUbuntuArchInfo() }
 
         binding.rowUbuntuProjectsDir.setOnClickListener {
@@ -409,7 +525,7 @@ class SettingsActivity : AppCompatActivity() {
             if (!UbuntuProotManager.isUbuntuInstalled(this)) {
                 Toast.makeText(
                     this,
-                    "Provisioned Zsh plugins (.zshrc). Opening Terminal to bootstrap Ubuntu & Zsh...",
+                    "Opening terminal to complete environment setup…",
                     Toast.LENGTH_SHORT
                 ).show()
                 startActivity(
@@ -422,7 +538,7 @@ class SettingsActivity : AppCompatActivity() {
                 )
                 return@setOnClickListener
             }
-            binding.valueZshSetup.text = "Installing..."
+            binding.valueZshSetup.text = "Installing…"
             Thread {
                 val ok = UbuntuProotManager.installZshInUbuntu(this) { msg ->
                     val clean = msg.replace(Regex("\u001b\\[[0-9;]*m"), "").trim()
@@ -433,7 +549,7 @@ class SettingsActivity : AppCompatActivity() {
                 runOnUiThread {
                     refreshSummary()
                     if (ok) {
-                        Toast.makeText(this, "Real Zsh + plugins installed and active!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Zsh and plugins installed", Toast.LENGTH_SHORT).show()
                     } else {
                         startActivity(
                             Intent(this, TerminalActivity::class.java).apply {
@@ -453,7 +569,6 @@ class SettingsActivity : AppCompatActivity() {
             showUbuntuRootfsMaintenanceDialog()
         }
 
-        // Section 5 & 6: LSP, Terminal, Diagnostics, About
         binding.rowLsp.setOnClickListener {
             startActivity(Intent(this, LspActivity::class.java))
         }
@@ -465,15 +580,57 @@ class SettingsActivity : AppCompatActivity() {
                 }
             )
         }
+
+        // Page 5: System & About
+        binding.switchNotifications.isChecked = settings.downloadNotificationsEnabled
+        binding.switchNotifications.setOnCheckedChangeListener { _, checked ->
+            settings.downloadNotificationsEnabled = checked
+        }
+
         binding.rowDiag.setOnClickListener {
             startActivity(Intent(this, DiagActivity::class.java))
+        }
+        binding.rowOnboarding.setOnClickListener {
+            OnboardingAndHapticsHelper.showOnboardingDialog(
+                context = this,
+                onBootstrapNow = { runBootstrapFromSettings(forceReinstall = false) },
+                onOpenLspManager = { startActivity(Intent(this, LspActivity::class.java)) },
+                onThemeChanged = {
+                    applyThemeChrome()
+                    refreshSummary()
+                }
+            )
         }
         binding.rowAbout.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
     }
 
+    private fun refreshCategorySummaries() {
+        val themeName = themeLabel(settings.editorTheme)
+        val fontName = Settings.fontById(settings.fontFamily).label
+        binding.navSubAppearance.text = "$themeName • $fontName (${settings.fontSizeSp} sp)"
+
+        val autoSaveText = if (settings.autoSaveEnabled) "Auto-save on" else "Auto-save off"
+        val wrapText = if (settings.wordWrap) "Word wrap on" else "Word wrap off"
+        binding.navSubEditor.text = "$autoSaveText • $wrapText • Ligatures & folding"
+
+        val shellName = if (settings.defaultShell == Settings.SHELL_BASH) "Bash" else "Zsh"
+        val styleIdx = settings.terminalStyleIndex.coerceIn(0, TerminalActivity.TERMUX_STYLES.lastIndex)
+        val termStyle = TerminalActivity.TERMUX_STYLES[styleIdx].name
+        binding.navSubTerminal.text = "$shellName • $termStyle"
+
+        val isUbuntuReady = UbuntuProotManager.isUbuntuInstalled(this)
+        val envStatus = if (isUbuntuReady) "Ubuntu 24.04 Ready" else "Setup required"
+        binding.navSubEnvironment.text = "$envStatus • /root/projects"
+
+        val installedCount = LspManager.AVAILABLE_SERVERS.count { LspManager.isInstalled(this, it.id) }
+        binding.navSubLsp.text = "$installedCount of ${LspManager.AVAILABLE_SERVERS.size} installed"
+    }
+
     private fun refreshSummary() {
+        refreshCategorySummaries()
+
         binding.valueTheme.text = themeLabel(settings.editorTheme)
         binding.valueFont.text = Settings.fontById(settings.fontFamily).label
         binding.valueFontSize.text = getString(R.string.font_size_value, settings.fontSizeSp)
@@ -482,9 +639,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchAutoSave.isChecked = settings.autoSaveEnabled
         binding.rowAutoSaveDelay.alpha = if (settings.autoSaveEnabled) 1f else 0.5f
         binding.valueAutoSaveDelay.text = when (settings.autoSaveDelayMs) {
-            800 -> "0.8s (Instant)"
-            1500 -> "1.5s (Balanced)"
-            3000 -> "3.0s (Relaxed)"
+            800 -> "0.8s"
+            1500 -> "1.5s"
+            3000 -> "3.0s"
             5000 -> "5.0s"
             else -> "${settings.autoSaveDelayMs} ms"
         }
@@ -496,7 +653,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchCodeFolding.isChecked = settings.codeFoldingEnabled
 
         binding.valueDefaultShell.text =
-            if (settings.defaultShell == Settings.SHELL_BASH) "GNU Bash" else "Zsh (robbyrussell)"
+            if (settings.defaultShell == Settings.SHELL_BASH) "Bash" else "Zsh"
 
         val styleIdx = settings.terminalStyleIndex.coerceIn(0, TerminalActivity.TERMUX_STYLES.lastIndex)
         binding.valueTerminalStyle.text = TerminalActivity.TERMUX_STYLES[styleIdx].name
@@ -504,9 +661,9 @@ class SettingsActivity : AppCompatActivity() {
         val termProps = AlpineLinuxEnvironment.loadTermuxProperties(this)
         val cursorIdx = if (settings.terminalCursorStyle in 0..2) settings.terminalCursorStyle else termProps.cursorStyle
         binding.valueTerminalCursor.text = when (cursorIdx) {
-            1 -> "Underline (_)"
-            2 -> "Bar (|)"
-            else -> "Block (█)"
+            1 -> "Underline"
+            2 -> "Bar"
+            else -> "Block"
         }
 
         val hapticLabels = listOf("Off", "Light", "Medium", "Strong")
@@ -516,44 +673,44 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchTerminalStickyCtrl.isChecked = settings.terminalStickyCtrl
         binding.switchTerminalAutoWakelock.isChecked = settings.terminalAutoWakeLock
         binding.switchTerminalKeepScreen.isChecked = settings.terminalKeepScreenOn
+        binding.switchNotifications.isChecked = settings.downloadNotificationsEnabled
 
         binding.valueUbuntuArch.text = "${UbuntuProotManager.detectHostAbi()} (${UbuntuProotManager.ubuntuArch()})"
 
         val projectsCount = ProjectManager.listAppDirProjects(this).size
         val activeProjName = ProjectManager.activeProjectName(this)
-        binding.valueUbuntuProjectsDir.text = "/root/projects ($projectsCount)"
-        binding.subUbuntuProjectsDir.text =
-            "Active: /root/projects/$activeProjName • Tap to open in Terminal"
+        binding.valueUbuntuProjectsDir.text = "$projectsCount projects"
+        binding.subUbuntuProjectsDir.text = "Active: $activeProjName (/root/projects)"
 
         val isUbuntuReady = UbuntuProotManager.isUbuntuInstalled(this)
         val isZshBinReady = UbuntuProotManager.isZshBinaryInstalled(this)
         val arePluginsReady = UbuntuProotManager.areZshPluginsProvisioned(this)
 
         binding.valueZshSetup.text = when {
-            isZshBinReady && arePluginsReady -> "Installed ✓"
-            arePluginsReady -> "Plugins Ready"
+            isZshBinReady && arePluginsReady -> "Active"
+            arePluginsReady -> "Ready"
             else -> "Install"
         }
         binding.subZshSetup.text = when {
             isZshBinReady && arePluginsReady ->
-                "Real /usr/bin/zsh (robbyrussell theme) + autosuggestions, syntax-highlighting & completions active"
+                "Zsh with autosuggestions, syntax highlighting, and completions"
             arePluginsReady ->
-                "robbyrussell theme, plugins & .zshrc ready — tap to install /usr/bin/zsh package via Ubuntu APT"
+                "Plugins configured — tap to install Zsh binary"
             else ->
-                "Tap to provision Zsh & plugins (autosuggestions, syntax-highlighting, completions)"
+                "Tap to configure Zsh and shell plugins"
         }
 
-        binding.valueUbuntuSync.text = if (isUbuntuReady) "Installed ✓" else "Install"
+        binding.valueUbuntuSync.text = if (isUbuntuReady) "Ready" else "Install"
         binding.subUbuntuSync.text = if (isUbuntuReady) {
-            "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} (${UbuntuProotManager.ubuntuArch()}) + PRoot ready"
+            "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} (${UbuntuProotManager.ubuntuArch()}) installed"
         } else {
-            "Tap to download & extract official Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} rootfs + PRoot"
+            "Tap to install Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} runtime"
         }
 
         val installedCount = LspManager.AVAILABLE_SERVERS.count { LspManager.isInstalled(this, it.id) }
-        binding.valueLsp.text = "$installedCount/${LspManager.AVAILABLE_SERVERS.size} active"
+        binding.valueLsp.text = "$installedCount/${LspManager.AVAILABLE_SERVERS.size}"
         val activeSessions = TerminalActivity.persistentSessions.size
-        binding.valueTerminal.text = if (activeSessions > 0) "$activeSessions running" else "Open"
+        binding.valueTerminal.text = if (activeSessions > 0) "$activeSessions active" else "Open"
 
         updateLivePreviewCard()
     }
@@ -568,7 +725,7 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_theme),
-            subtitle = "Editor Syntax Color Scheme (updates Live Preview immediately)",
+            subtitle = "Select editor and interface color theme",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -585,7 +742,7 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_font),
-            subtitle = "Monospace typeface for Editor & Terminal",
+            subtitle = "Monospace typeface for code editor and terminal",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -601,7 +758,7 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = getString(R.string.pref_font_size),
-            subtitle = "Code editor text scale",
+            subtitle = "Code editor text size",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -613,16 +770,16 @@ class SettingsActivity : AppCompatActivity() {
     private fun showAutoSaveDelayPicker() {
         val delays = listOf(800, 1500, 3000, 5000)
         val labels = listOf(
-            "Instant (0.8 seconds)",
-            "Balanced (1.5 seconds — Recommended)",
-            "Relaxed (3.0 seconds)",
+            "0.8 seconds (Fast)",
+            "1.5 seconds (Default)",
+            "3.0 seconds (Relaxed)",
             "5.0 seconds"
         )
         val checked = delays.indexOf(settings.autoSaveDelayMs).let { if (it >= 0) it else 1 }
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = "Auto-Save Delay",
-            subtitle = "Automatically writes modified files after typing pauses",
+            subtitle = "Save modified files after typing pauses",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -635,14 +792,14 @@ class SettingsActivity : AppCompatActivity() {
     private fun showDefaultShellPicker() {
         val shells = listOf(Settings.SHELL_ZSH, Settings.SHELL_BASH)
         val labels = listOf(
-            "Zsh (robbyrussell theme + zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions)",
-            "GNU Bash (/bin/bash)"
+            "Zsh (with syntax highlighting & autosuggestions)",
+            "Bash (/bin/bash)"
         )
         val checked = if (settings.defaultShell == Settings.SHELL_BASH) 1 else 0
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
-            title = "Default Linux Shell",
-            subtitle = "Used for Ubuntu 24.04 PRoot terminal sessions",
+            title = "Default Shell",
+            subtitle = "Interactive shell for terminal sessions",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -659,7 +816,7 @@ class SettingsActivity : AppCompatActivity() {
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
             title = "Terminal Color Theme",
-            subtitle = "Persists across terminal sessions and navigation",
+            subtitle = "Choose terminal color palette",
             items = labels,
             checkedIndex = checked
         ) { which ->
@@ -674,8 +831,8 @@ class SettingsActivity : AppCompatActivity() {
         val current = if (settings.terminalCursorStyle in 0..2) settings.terminalCursorStyle else termProps.cursorStyle
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
-            title = "Terminal Cursor Style",
-            subtitle = "Choose terminal prompt cursor shape",
+            title = "Cursor Style",
+            subtitle = "Select terminal cursor shape",
             items = styles,
             checkedIndex = current
         ) { which ->
@@ -686,15 +843,15 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showHapticFeedbackPicker() {
         val levels = listOf(
-            "Off (No vibration)",
-            "Light (10ms — Default)",
-            "Medium (22ms)",
-            "Strong (38ms)"
+            "Off",
+            "Light (Default)",
+            "Medium",
+            "Strong"
         )
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
-            title = "Extra-Keys & Toolbar Haptics",
-            subtitle = "Tactile feedback intensity",
+            title = "Haptic Feedback",
+            subtitle = "Tactile vibration intensity",
             items = levels,
             checkedIndex = settings.hapticFeedbackLevel.coerceIn(0, 3)
         ) { which ->
@@ -708,11 +865,11 @@ class SettingsActivity : AppCompatActivity() {
         val hostAbi = UbuntuProotManager.detectHostAbi()
         val uArch = UbuntuProotManager.ubuntuArch()
         val labels = listOf(
-            "$hostAbi / Ubuntu $uArch (Native Hardware Speed — Active)"
+            "$hostAbi / Ubuntu $uArch (Native)"
         )
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
-            title = "Host & Rootfs Architecture",
+            title = "System Architecture",
             subtitle = "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} (${UbuntuProotManager.UBUNTU_CODENAME})",
             items = labels,
             checkedIndex = 0
@@ -724,16 +881,15 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showUbuntuRootfsMaintenanceDialog() {
         val options = listOf(
-            "Verify / Bootstrap Ubuntu 24.04.5 LTS + PRoot + Zsh (robbyrussell)",
-            "Backup Environment to .tar.gz Archive (Export Rootfs + PRoot via SAF)",
-            "Restore Environment from .tar.gz Backup (Import via SAF — Skips Download)",
-            "Reinstall Clean Ubuntu 24.04.5 LTS Rootfs (Preserves /root/projects)",
-            "Show Interactive First-Run Onboarding Guide"
+            "Install or Verify Environment",
+            "Export Backup (.tar.gz)",
+            "Restore from Backup (.tar.gz)",
+            "Reinstall Environment (Keep Projects)"
         )
         ModernUiHelper.showModernSingleChoiceDialog(
             context = this,
-            title = "Ubuntu 24.04.5 LTS • Environment & Backup",
-            subtitle = UbuntuProotManager.ubuntuRootDir(this).absolutePath,
+            title = "Runtime & Backups",
+            subtitle = "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} LTS",
             items = options,
             checkedIndex = 0
         ) { which ->
@@ -744,31 +900,20 @@ class SettingsActivity : AppCompatActivity() {
                 3 -> {
                     ModernUiHelper.showModernConfirmDialog(
                         context = this,
-                        title = "Reinstall Ubuntu Rootfs?",
-                        message = "This will re-extract a clean Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} rootfs while preserving all your projects in /root/projects.",
+                        title = "Reinstall Environment?",
+                        message = "This will reinstall a clean Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} environment while preserving all projects in /root/projects.",
                         confirmText = "Reinstall",
                         isDestructive = true
                     ) {
                         runBootstrapFromSettings(forceReinstall = true)
                     }
                 }
-                4 -> {
-                    OnboardingAndHapticsHelper.showOnboardingDialog(
-                        context = this,
-                        onBootstrapNow = { runBootstrapFromSettings(forceReinstall = false) },
-                        onOpenLspManager = { startActivity(Intent(this, LspActivity::class.java)) },
-                        onThemeChanged = {
-                            applyThemeChrome()
-                            refreshSummary()
-                        }
-                    )
-                }
             }
         }
     }
 
     private fun runBootstrapFromSettings(forceReinstall: Boolean) {
-        binding.valueUbuntuSync.text = "Working..."
+        binding.valueUbuntuSync.text = "Working…"
         Thread {
             val ok = UbuntuProotManager.bootstrapUbuntuRootfs(this, forceReinstall = forceReinstall) { msg ->
                 val cleanMsg = msg.replace(Regex("\u001b\\[[0-9;]*m"), "")
@@ -780,8 +925,8 @@ class SettingsActivity : AppCompatActivity() {
                 refreshSummary()
                 Toast.makeText(
                     this,
-                    if (ok) "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} + PRoot + Zsh ready!"
-                    else "Bootstrap failed — check internet connection",
+                    if (ok) "Environment ready"
+                    else "Setup failed — check network connection",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -800,17 +945,17 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         val titleView = MaterialTextView(this).apply {
-            text = "~/.termux/termux.properties"
+            text = "Terminal Properties"
             textSize = 15.5f
-            typeface = Typeface.MONOSPACE
-            setTypeface(typeface, Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(this@SettingsActivity)
             setTextColor(palette.fgColor)
         }
         rootCard.addView(titleView)
 
         val subView = MaterialTextView(this).apply {
-            text = "Customize extra-keys matrix, terminal margins, cursor blink rate & bell behavior"
+            text = "Configure extra keys layout, margins, cursor blink rate, and bell behavior"
             textSize = 11.5f
+            typeface = ModernUiHelper.appFontRegular(this@SettingsActivity)
             setTextColor(palette.subtleColor)
             setPadding(0, dp(2), 0, dp(10))
         }
@@ -847,6 +992,7 @@ class SettingsActivity : AppCompatActivity() {
             text = "Open in Editor"
             textSize = 12f
             isAllCaps = false
+            typeface = ModernUiHelper.appFontSemiBold(this@SettingsActivity)
             setTextColor(palette.accentColor)
             setOnClickListener {
                 runCatching { propFile.writeText(input.text?.toString() ?: "") }
@@ -870,6 +1016,7 @@ class SettingsActivity : AppCompatActivity() {
             text = "Cancel"
             textSize = 12f
             isAllCaps = false
+            typeface = ModernUiHelper.appFontSemiBold(this@SettingsActivity)
             setTextColor(palette.subtleColor)
             setOnClickListener { sheetDialog.dismiss() }
         }
@@ -879,17 +1026,30 @@ class SettingsActivity : AppCompatActivity() {
             text = "Save"
             textSize = 12f
             isAllCaps = false
+            typeface = ModernUiHelper.appFontBold(this@SettingsActivity)
             cornerRadius = dp(10)
             backgroundTintList = ColorStateList.valueOf(palette.accentColor)
-            setTextColor(if (palette.isDark) Color.parseColor("#2B1700") else Color.WHITE)
+            setTextColor(Color.WHITE)
             setOnClickListener {
                 runCatching { propFile.writeText(input.text?.toString() ?: "") }
                 sheetDialog.dismiss()
                 refreshSummary()
-                Toast.makeText(this@SettingsActivity, "Saved ~/.termux/termux.properties ✓", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@SettingsActivity, "Saved terminal properties", Toast.LENGTH_SHORT).show()
             }
         }
         btnRow.addView(saveBtn)
         rootCard.addView(btnRow)
+    }
+
+    companion object {
+        private const val STATE_CURRENT_PAGE = "state_current_page"
+        const val EXTRA_INITIAL_PAGE = "extra_initial_page"
+
+        const val PAGE_HOME = 0
+        const val PAGE_APPEARANCE = 1
+        const val PAGE_EDITOR = 2
+        const val PAGE_TERMINAL = 3
+        const val PAGE_ENVIRONMENT = 4
+        const val PAGE_SYSTEM = 5
     }
 }

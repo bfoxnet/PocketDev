@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="false">
 
-    <!-- Main Full-Screen Termux Viewport -->
+    <!-- Main Full-Screen Terminal Viewport -->
     <LinearLayout
         android:id="@+id/terminal_root"
         android:layout_width="match_parent"
@@ -29,11 +29,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="28dp"
                 android:layout_marginEnd="6dp"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:gravity="center"
                 android:paddingHorizontal="10dp"
                 android:text="← Editor"
-                android:textColor="#80DEEA"
+                android:textColor="@color/accent_light"
                 android:textSize="11.5sp"
                 android:textStyle="bold" />
 
@@ -58,10 +58,10 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginStart="2dp"
-                android:contentDescription="New Terminal Session"
+                android:contentDescription="New Session"
                 android:padding="6dp"
                 android:src="@drawable/ic_add"
-                app:tint="#80DEEA" />
+                app:tint="@color/accent_light" />
 
             <ImageButton
                 android:id="@+id/btn_top_drawer"
@@ -69,7 +69,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginStart="2dp"
-                android:contentDescription="Open Session Drawer"
+                android:contentDescription="Sessions"
                 android:padding="6dp"
                 android:src="@drawable/ic_menu"
                 app:tint="#E0E0E0" />
@@ -80,7 +80,7 @@
             android:layout_height="1dp"
             android:background="#22FFFFFF" />
 
-        <!-- 2. Interactive Selection Action Bar (Visible during terminal text selection mode) -->
+        <!-- 2. Interactive Selection Action Bar -->
         <LinearLayout
             android:id="@+id/terminal_selection_bar"
             android:layout_width="match_parent"
@@ -97,7 +97,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_semibold"
                 android:singleLine="true"
                 android:text="Drag handles to select text"
                 android:textColor="#E6EDF3"
@@ -109,12 +109,13 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
+                android:fontFamily="@font/plus_jakarta_sans_semibold"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:minWidth="0dp"
                 android:paddingHorizontal="8dp"
                 android:text="Select All"
-                android:textColor="#80DEEA"
+                android:textColor="@color/accent_light"
                 android:textSize="11sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -123,6 +124,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="30dp"
                 android:layout_marginStart="4dp"
+                android:fontFamily="@font/plus_jakarta_sans_semibold"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:minWidth="0dp"
@@ -149,7 +151,7 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <!-- 4. Termux Bottom Helper Keyboard Toolbar (Drawer + Back Icons + 2-Row Extra Keys + Text Input Page) -->
+        <!-- 4. Bottom Helper Keyboard Toolbar -->
         <LinearLayout
             android:id="@+id/extra_keys_container"
             android:layout_width="match_parent"
@@ -159,7 +161,6 @@
             android:paddingStart="2dp"
             android:paddingVertical="2dp">
 
-            <!-- Dedicated Helper Keyboard Navigation Column: Drawer Icon (Top) & Text Input Page Switcher (Bottom) -->
             <LinearLayout
                 android:id="@+id/extra_keys_nav_col"
                 android:layout_width="38dp"
@@ -173,10 +174,10 @@
                     android:layout_height="0dp"
                     android:layout_margin="1.5dp"
                     android:layout_weight="1"
-                    android:contentDescription="Toggle Command Input Bar"
+                    android:contentDescription="Toggle Command Input"
                     android:padding="6dp"
                     android:src="@drawable/ic_text_fields"
-                    app:tint="#80DEEA" />
+                    app:tint="@color/accent_light" />
 
                 <ImageButton
                     android:id="@+id/btn_toolbar_back"
@@ -185,7 +186,7 @@
                     android:layout_height="0dp"
                     android:layout_margin="1.5dp"
                     android:layout_weight="1"
-                    android:contentDescription="Back to Main App"
+                    android:contentDescription="Back to Editor"
                     android:padding="6dp"
                     android:src="@drawable/ic_arrow_back"
                     app:tint="#FFFFFF" />
@@ -197,7 +198,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1">
 
-                <!-- Page 0: Termux 2-Row ExtraKeysView Grid -->
+                <!-- Page 0: 2-Row ExtraKeysView Grid -->
                 <LinearLayout
                     android:id="@+id/extra_keys_grid_page"
                     android:layout_width="match_parent"
@@ -222,7 +223,7 @@
                         android:orientation="horizontal" />
                 </LinearLayout>
 
-                <!-- Page 1: Termux Toolbar Text Input View (Toggled via [Aa] icon or long-press) -->
+                <!-- Page 1: Toolbar Text Input View -->
                 <LinearLayout
                     android:id="@+id/extra_keys_text_input_page"
                     android:layout_width="match_parent"
@@ -237,9 +238,9 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:backgroundTint="#80DEEA"
+                        android:backgroundTint="@color/accent_light"
                         android:fontFamily="@font/jetbrains_mono"
-                        android:hint="Type command or text (tap KEYS for Extra Keys)…"
+                        android:hint="Enter command…"
                         android:imeOptions="actionSend|flagNoExtractUi"
                         android:inputType="text"
                         android:singleLine="true"
@@ -252,19 +253,20 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="36dp"
+                        android:fontFamily="@font/plus_jakarta_sans_bold"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:minWidth="0dp"
                         android:paddingHorizontal="10dp"
                         android:text="KEYS"
-                        android:textColor="#80DEEA"
+                        android:textColor="@color/accent_light"
                         android:textSize="11sp" />
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Exact Termux Left Navigation Drawer (`left_drawer`, 240dp width) -->
+    <!-- Left Navigation Drawer -->
     <LinearLayout
         android:id="@+id/terminal_session_drawer"
         android:layout_width="256dp"
@@ -276,7 +278,7 @@
         android:focusable="true"
         android:orientation="vertical">
 
-        <!-- Top Row: Back to Editor + Ubuntu 24.04 Title + Organized Settings Gear -->
+        <!-- Top Row: Back to Editor + Title + Settings Gear -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -305,21 +307,22 @@
                     android:id="@+id/drawer_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
                     android:singleLine="true"
-                    android:text="Ubuntu 24.04 • Zsh + PRoot"
+                    android:text="Terminal"
                     android:textColor="#FFFFFF"
-                    android:textSize="13sp"
+                    android:textSize="13.5sp"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/drawer_subtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
+                    android:fontFamily="@font/plus_jakarta_sans"
                     android:singleLine="true"
-                    android:text="Ubuntu 24.04.5 LTS • Zsh + Plugins"
+                    android:text="Ubuntu 24.04 LTS"
                     android:textColor="#9E9E9E"
-                    android:textSize="10sp" />
+                    android:textSize="10.5sp" />
             </LinearLayout>
 
             <ImageButton
@@ -327,7 +330,7 @@
                 style="@style/PocketDev.IconButton"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:contentDescription="Open Organized Settings"
+                android:contentDescription="Settings"
                 android:padding="7dp"
                 android:src="@drawable/ic_settings"
                 app:tint="#E0E0E0" />
@@ -338,7 +341,7 @@
             android:layout_height="1dp"
             android:background="#26FFFFFF" />
 
-        <!-- Middle: Termux Numbered Sessions List (`[1] zsh`) -->
+        <!-- Middle: Sessions List -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -358,7 +361,7 @@
             android:layout_height="1dp"
             android:background="#26FFFFFF" />
 
-        <!-- Bottom Row: Exact Termux `KEYBOARD` and `NEW SESSION` Buttons -->
+        <!-- Bottom Row: KEYBOARD and NEW SESSION Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -372,10 +375,11 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="KEYBOARD"
-                android:textColor="#80DEEA"
+                android:textColor="@color/accent_light"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -385,10 +389,11 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="NEW SESSION"
-                android:textColor="#80DEEA"
+                android:textColor="@color/accent_light"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>

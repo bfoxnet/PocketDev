@@ -17,11 +17,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 
 /**
- * On-device Diagnostics screen (`DiagActivity`) surfacing:
- * 1. Routed `[DIAG]`, `[PRoot]`, `[LSP]`, `[Build]`, and `[Git]` runtime events from `DiagLogger`
- *    (so errors and verification details are inspectable here instead of only in the terminal).
- * 2. Live PRoot & Ubuntu 24.04.5 LTS environment state and LSP stdio server health.
- * 3. Syntax highlighting, lazy per-file grammar loading, and theme fidelity verification.
+ * System & Grammar Diagnostics screen (`DiagActivity`).
  */
 class DiagActivity : AppCompatActivity() {
 
@@ -36,12 +32,12 @@ class DiagActivity : AppCompatActivity() {
         val surface = Color.parseColor(theme.ui.bg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
         val toolbar = MaterialToolbar(this).apply {
             title = getString(R.string.menu_diag)
-            subtitle = "Routed [DIAG] Logs, PRoot, Stdio LSP & Highlighting Health"
+            subtitle = "System logs, runtime status, and syntax engine health"
             setTitleTextAppearance(this@DiagActivity, R.style.PocketDev_ToolbarTitle)
             setSubtitleTextAppearance(this@DiagActivity, R.style.PocketDev_ToolbarSubtitle)
             minimumHeight = (46 * density).toInt()
@@ -91,8 +87,9 @@ class DiagActivity : AppCompatActivity() {
         }
 
         val clearBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Clear [DIAG] Log"
+            text = "Clear Logs"
             isAllCaps = false
+            typeface = ModernUiHelper.appFontSemiBold(this@DiagActivity)
             setTextColor(fg)
             layoutParams = LinearLayout.LayoutParams(
                 0,
@@ -103,16 +100,17 @@ class DiagActivity : AppCompatActivity() {
             }
             setOnClickListener {
                 DiagLogger.clear(this@DiagActivity)
-                Toast.makeText(this@DiagActivity, "Cleared [DIAG] history", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@DiagActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
                 refreshDiagnosticsReport()
             }
         }
 
         val share = MaterialButton(this).apply {
-            text = "Share report"
+            text = "Share Report"
             isAllCaps = false
+            typeface = ModernUiHelper.appFontBold(this@DiagActivity)
             backgroundTintList = ColorStateList.valueOf(accent)
-            setTextColor(if (theme.dark) Color.parseColor("#2B1700") else Color.WHITE)
+            setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -159,9 +157,9 @@ class DiagActivity : AppCompatActivity() {
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(android.content.Intent.EXTRA_TEXT, text)
-                putExtra(android.content.Intent.EXTRA_SUBJECT, "PocketDev diag report")
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "PocketDev Diagnostics Report")
             }
-            startActivity(android.content.Intent.createChooser(send, "Share diag report"))
+            startActivity(android.content.Intent.createChooser(send, "Share Report"))
         }
 
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
@@ -177,7 +175,7 @@ class DiagActivity : AppCompatActivity() {
     }
 
     private fun refreshDiagnosticsReport() {
-        val log = StringBuilder("PocketDev Diagnostics & [DIAG] Center\n=====================================\n")
+        val log = StringBuilder("PocketDev System Diagnostics\n============================\n")
         Thread {
             val result = runDiag(log)
             runOnUiThread {
@@ -204,7 +202,7 @@ class DiagActivity : AppCompatActivity() {
         line(s, "saved theme: $activeThemeId (expected bg=${activeTheme.ui.bg} fg=${activeTheme.ui.fg})")
         line(s, "default shell: ${settings.defaultShell} (zshTheme=${settings.zshTheme})")
 
-        line(s, "\n== 0. Routed [DIAG] & Runtime Diagnostics Stream ==")
+        line(s, "\n== 0. Runtime Diagnostics Stream ==")
         val prootDiag = UbuntuProotManager.lastVerifyDiagnostics
         if (prootDiag.isNotBlank()) {
             line(s, "[DIAG] PRoot Last Verify: $prootDiag")
@@ -219,7 +217,7 @@ class DiagActivity : AppCompatActivity() {
 
         val diagEntries = DiagLogger.getRecentEntries(this, limit = 80)
         if (diagEntries.isEmpty()) {
-            line(s, "(No [DIAG] errors or warnings recorded in current session)")
+            line(s, "(No errors or warnings recorded in current session)")
         } else {
             diagEntries.forEach { entry ->
                 line(s, "DIAG $entry")

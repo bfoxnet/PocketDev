@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AndroidIDE Material 3 Dark Palette (Lightly Orange App UI Primary) -->
-    <color name="accent">#FFB74D</color>
-    <color name="accent_light">#FFCC80</color>
-    <color name="tab_indicator">#FFB74D</color>
+    <!-- Primary App Palette (#00695C) -->
+    <color name="accent">#00695C</color>
+    <color name="accent_light">#26A69A</color>
+    <color name="tab_indicator">#00695C</color>
+    <color name="on_primary">#FFFFFF</color>
 
     <color name="surface">#141318</color>
     <color name="surface_container">#1C1B21</color>

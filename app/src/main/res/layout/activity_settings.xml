@@ -7,7 +7,7 @@
     android:background="@color/chrome_background"
     android:orientation="vertical">
 
-    <!-- Fixed Top AppBarLayout matching MainActivity StatusBar & AppBar chrome -->
+    <!-- Top AppBarLayout -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/settings_appbar"
         android:layout_width="match_parent"
@@ -23,7 +23,6 @@
             android:layout_height="46dp"
             android:background="@color/chrome_background"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:subtitle="Appearance, Code Editor, Terminal &amp; Ubuntu 24.04 Environment"
             app:title="@string/settings_title" />
 
         <View
@@ -32,7 +31,7 @@
             android:background="#26888888" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Scrollable Organized Settings Content -->
+    <!-- Multi-Page Settings Container -->
     <ScrollView
         android:id="@+id/settings_scroll"
         android:layout_width="match_parent"
@@ -47,136 +46,35 @@
             android:orientation="vertical"
             android:paddingBottom="28dp">
 
-            <!-- Section 1: Appearance + Live Code Preview -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_appearance"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="6dp"
-                android:text="@string/pref_section_appearance"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
-            <!-- Live Theme, Font, Size & Ligature Preview Card -->
+            <!-- ============================================================ -->
+            <!-- PAGE 0: SETTINGS HOME (Category Navigation Hub)              -->
+            <!-- ============================================================ -->
             <LinearLayout
-                android:id="@+id/card_live_preview"
+                android:id="@+id/page_home"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:layout_marginBottom="10dp"
                 android:orientation="vertical"
-                android:padding="14dp">
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/preview_badge"
-                    style="@style/TextAppearance.Material3.LabelSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:text="LIVE EDITOR PREVIEW"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/preview_code_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:lineSpacingExtra="3dp"
-                    android:text="fun main(args: Array&lt;String&gt;) {\n    val ready = args.isNotEmpty() &amp;&amp; 1 != 0\n    if (ready) println(&quot;PocketDev =&gt; Ready&quot;)\n}"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/card_appearance"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
+                android:paddingTop="14dp">
 
                 <LinearLayout
-                    android:id="@+id/row_theme"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_theme"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/pref_theme" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_theme"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Editor syntax highlighting &amp; surface palette" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_theme"
-                        style="@style/PocketDev.PrefValue" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_font"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_font"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/pref_font" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_font"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Monospace typeface for code editor &amp; terminal" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_font"
-                        style="@style/PocketDev.PrefValue" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <!-- Inline Font Size Row + Material Slider -->
-                <LinearLayout
-                    android:id="@+id/row_font_size"
+                    android:id="@+id/card_categories"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="6dp">
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
 
+                    <!-- Category 1: Appearance -->
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:id="@+id/nav_appearance"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_appearance"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_text_fields" />
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -185,688 +83,1169 @@
                             android:orientation="vertical">
 
                             <com.google.android.material.textview.MaterialTextView
-                                android:id="@+id/title_font_size"
+                                android:id="@+id/nav_title_appearance"
                                 style="@style/PocketDev.PrefTitle"
-                                android:text="@string/pref_font_size" />
+                                android:text="Appearance" />
 
                             <com.google.android.material.textview.MaterialTextView
-                                android:id="@+id/sub_font_size"
+                                android:id="@+id/nav_sub_appearance"
                                 style="@style/PocketDev.PrefSubtitle"
-                                android:text="Drag slider to scale editor text size (10–24 sp)" />
+                                android:text="Color theme, editor font, and text size" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_appearance"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 2: Code Editor -->
+                    <LinearLayout
+                        android:id="@+id/nav_editor"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_editor"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_code" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_editor"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Code Editor" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_editor"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Auto-save, ligatures, word wrap, and code folding" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_editor"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 3: Terminal -->
+                    <LinearLayout
+                        android:id="@+id/nav_terminal"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_terminal"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_terminal" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_terminal"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Terminal" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_terminal"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Shell, color theme, cursor, haptics, and extra keys" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_terminal"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 4: Linux Environment -->
+                    <LinearLayout
+                        android:id="@+id/nav_environment"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_environment"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_folder_open" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_environment"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Linux Environment" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_environment"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Ubuntu 24.04 LTS runtime, workspace, and backups" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_environment"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 5: Language Servers -->
+                    <LinearLayout
+                        android:id="@+id/nav_lsp"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_lsp"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_lsp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_lsp"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Language Servers" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_lsp"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Manage LSP servers and code intelligence" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_lsp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Category 6: System & About -->
+                    <LinearLayout
+                        android:id="@+id/nav_system"
+                        style="@style/PocketDev.PrefRow">
+
+                        <ImageView
+                            android:id="@+id/icon_nav_system"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginEnd="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_info" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_title_system"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="System &amp; About" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/nav_sub_system"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Diagnostics, notifications, and version info" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/chev_nav_system"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================================================ -->
+            <!-- PAGE 1: APPEARANCE                                           -->
+            <!-- ============================================================ -->
+            <LinearLayout
+                android:id="@+id/page_appearance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_appearance"
+                    style="@style/TextAppearance.Material3.LabelLarge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="@string/pref_section_appearance"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
+
+                <!-- Live Theme, Font, Size & Ligature Preview Card -->
+                <LinearLayout
+                    android:id="@+id/card_live_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:layout_marginBottom="10dp"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/preview_badge"
+                        style="@style/TextAppearance.Material3.LabelSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                        android:text="LIVE PREVIEW"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/preview_code_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:fontFamily="@font/jetbrains_mono"
+                        android:lineSpacingExtra="3dp"
+                        android:text="fun main(args: Array&lt;String&gt;) {\n    val ready = args.isNotEmpty() &amp;&amp; 1 != 0\n    if (ready) println(&quot;PocketDev =&gt; Ready&quot;)\n}"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/card_appearance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/row_theme"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_theme"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/pref_theme" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_theme"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Syntax highlighting and interface palette" />
                         </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/value_font_size"
+                            android:id="@+id/value_theme"
                             style="@style/PocketDev.PrefValue" />
                     </LinearLayout>
 
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/slider_font_size"
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_font"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_font"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/pref_font" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_font"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Monospace typeface for code editor and terminal" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_font"
+                            style="@style/PocketDev.PrefValue" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <!-- Inline Font Size Row + Material Slider -->
+                    <LinearLayout
+                        android:id="@+id/row_font_size"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:stepSize="1.0"
-                        android:value="14.0"
-                        android:valueFrom="10.0"
-                        android:valueTo="24.0" />
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="6dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <com.google.android.material.textview.MaterialTextView
+                                    android:id="@+id/title_font_size"
+                                    style="@style/PocketDev.PrefTitle"
+                                    android:text="@string/pref_font_size" />
+
+                                <com.google.android.material.textview.MaterialTextView
+                                    android:id="@+id/sub_font_size"
+                                    style="@style/PocketDev.PrefSubtitle"
+                                    android:text="Adjust code editor text scale (10–24 sp)" />
+                            </LinearLayout>
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/value_font_size"
+                                style="@style/PocketDev.PrefValue" />
+                        </LinearLayout>
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/slider_font_size"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:stepSize="1.0"
+                            android:value="14.0"
+                            android:valueFrom="10.0"
+                            android:valueTo="24.0" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 2: Code Editor, Intelligence & Auto-Save -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_editor"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:text="Code Editor &amp; Auto-Save"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
+            <!-- ============================================================ -->
+            <!-- PAGE 2: CODE EDITOR                                          -->
+            <!-- ============================================================ -->
             <LinearLayout
-                android:id="@+id/card_editor"
+                android:id="@+id/page_editor"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_auto_save"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Auto-Save Modified Files" />
-
-                <View
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_editor"
+                    style="@style/TextAppearance.Material3.LabelLarge"
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="Editor &amp; Saving"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:id="@+id/row_auto_save_delay"
-                    style="@style/PocketDev.PrefRow">
+                    android:id="@+id/card_editor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_auto_save"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Auto-Save" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_auto_save_delay"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_auto_save_delay"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Auto-Save Delay" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_auto_save_delay"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Save automatically after typing pauses" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_auto_save_delay"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Auto-Save Delay" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_auto_save_delay"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Idle typing interval before changes are automatically written to disk" />
+                            android:id="@+id/value_auto_save_delay"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="1.5s" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_auto_save_delay"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="1.5s" />
-                </LinearLayout>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_save_all_on_save"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Save All Open Files" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_save_all_on_save"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Save All Open Files on Save Press" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_ligatures"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Font Ligatures" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_ligatures"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Font Ligatures (--&gt;  =&gt;  !=  &lt;=)" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_wrap"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="@string/pref_word_wrap" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_wrap"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="@string/pref_word_wrap" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_sticky_scroll"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Sticky Scroll" />
 
-                <!-- Promoted directly from the hidden termux.properties dialog -->
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_sticky_scroll"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Sticky-Scroll Enclosing Class/Function Header" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_word_match"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Highlight Matching Words" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_word_match"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Highlight Matching Words Under Cursor" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_code_folding"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Code Folding &amp; Block Indent Guides" />
-            </LinearLayout>
-
-            <!-- Section 3: Terminal & Zsh Shell Style -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_terminal"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:text="Terminal &amp; Zsh Shell"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:id="@+id/card_terminal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:id="@+id/row_default_shell"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_default_shell"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Default Linux Shell" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_default_shell"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Real Ubuntu Zsh with autosuggestions, syntax-highlighting &amp; completions" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_default_shell"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Zsh + Plugins" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_terminal_style"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_terminal_style"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Terminal Color Theme" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_terminal_style"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Persisted terminal background, key &amp; cursor palette" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_terminal_style"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Default Black" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_terminal_cursor"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_terminal_cursor"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Terminal Cursor Style" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_terminal_cursor"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Block (█), Underline (_), or Bar (|)" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_terminal_cursor"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Block (█)" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <!-- Promoted Haptic Feedback Picker Row -->
-                <LinearLayout
-                    android:id="@+id/row_haptic_feedback"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_haptic_feedback"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Extra-Keys &amp; Toolbar Haptics" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_haptic_feedback"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Tactile vibration feedback when tapping terminal extra keys or quick tools" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_haptic_feedback"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Light" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_terminal_toolbar"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Show Terminal Helper Keyboard Toolbar" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_terminal_sticky_ctrl"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Toggle-Sticky CTRL Key (Latches Until Next Key)" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_terminal_auto_wakelock"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Auto Wake-Lock While Terminal Command Runs" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_terminal_keep_screen"
-                    style="@style/PocketDev.PrefRow"
-                    android:text="Always Keep Screen On in Terminal" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_termux_props"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_termux_props"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Edit ~/.termux/termux.properties" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_termux_props"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Customize extra-keys matrix, margins &amp; bell behavior" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_termux_props"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Edit" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_code_folding"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Code Folding" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 4: Ubuntu 24.04 LTS • PRoot & Zsh Environment -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_ubuntu"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:text="Ubuntu 24.04 LTS • PRoot &amp; Zsh Environment"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
+            <!-- ============================================================ -->
+            <!-- PAGE 3: TERMINAL                                             -->
+            <!-- ============================================================ -->
             <LinearLayout
-                android:id="@+id/card_ubuntu"
+                android:id="@+id/page_terminal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <LinearLayout
-                    android:id="@+id/row_ubuntu_arch"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_ubuntu_arch"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Host &amp; Rootfs Architecture" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_ubuntu_arch"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Native hardware ABI for Ubuntu 24.04.5 LTS PRoot userland" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_ubuntu_arch"
-                        style="@style/PocketDev.PrefValue" />
-                </LinearLayout>
-
-                <View
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_terminal"
+                    style="@style/TextAppearance.Material3.LabelLarge"
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="Shell &amp; Terminal"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:id="@+id/row_ubuntu_projects_dir"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_ubuntu_projects_dir"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Ubuntu Projects Directory" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_ubuntu_projects_dir"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="All projects are created directly inside Ubuntu at /root/projects" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_ubuntu_projects_dir"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="/root/projects" />
-                </LinearLayout>
-
-                <View
+                    android:id="@+id/card_terminal"
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_zsh_setup"
-                    style="@style/PocketDev.PrefRow">
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_default_shell"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_default_shell"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Default Shell" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_default_shell"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Interactive shell for terminal sessions" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_zsh_setup"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Install / Sync Real Zsh &amp; Plugins" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_zsh_setup"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Provisions /usr/bin/zsh (robbyrussell theme), zsh-autosuggestions, zsh-syntax-highlighting &amp; .zshrc" />
+                            android:id="@+id/value_default_shell"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Zsh" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_zsh_setup"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Configure" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
-
-                <LinearLayout
-                    android:id="@+id/row_ubuntu_sync"
-                    style="@style/PocketDev.PrefRow">
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_terminal_style"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_terminal_style"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Color Theme" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_terminal_style"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Background, key, and cursor palette" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_ubuntu_sync"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Install / Backup / Restore Ubuntu 24.04.5 LTS" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_ubuntu_sync"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Bootstrap rootfs, export .tar.gz backup, or restore offline archive" />
+                            android:id="@+id/value_terminal_style"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Default Black" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_ubuntu_sync"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Ready" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_terminal_cursor"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_terminal_cursor"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Cursor Style" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_terminal_cursor"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Block, underline, or bar cursor" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_terminal_cursor"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Block" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_haptic_feedback"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_haptic_feedback"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Haptic Feedback" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_haptic_feedback"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Vibration intensity for extra keys and toolbar" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_haptic_feedback"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Light" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_terminal_toolbar"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Extra Keys Toolbar" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_terminal_sticky_ctrl"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Sticky Ctrl Key" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_terminal_auto_wakelock"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Wake Lock During Execution" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_terminal_keep_screen"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Keep Screen On" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_termux_props"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_termux_props"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Terminal Properties" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_termux_props"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Configure extra keys layout, margins, and bell" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_termux_props"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Edit" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 5: Language Servers & Toolchains -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_tools"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:text="@string/pref_section_tools"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
+            <!-- ============================================================ -->
+            <!-- PAGE 4: LINUX ENVIRONMENT                                    -->
+            <!-- ============================================================ -->
             <LinearLayout
-                android:id="@+id/card_tools"
+                android:id="@+id/page_environment"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_ubuntu"
+                    style="@style/TextAppearance.Material3.LabelLarge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="Ubuntu 24.04 LTS Runtime"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:id="@+id/row_lsp"
-                    style="@style/PocketDev.PrefRow">
+                    android:id="@+id/card_ubuntu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_ubuntu_arch"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_ubuntu_arch"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="System Architecture" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_ubuntu_arch"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Hardware ABI and Linux rootfs target" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_lsp"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/lsp_title" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_lsp"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Manage stdio LSP servers &amp; language runtime packages" />
+                            android:id="@+id/value_ubuntu_arch"
+                            style="@style/PocketDev.PrefValue" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_lsp"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Manage" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_ubuntu_projects_dir"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_ubuntu_projects_dir"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Workspace Directory" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_ubuntu_projects_dir"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Projects are stored at /root/projects" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_ubuntu_projects_dir"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="/root/projects" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_zsh_setup"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_zsh_setup"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Zsh &amp; Shell Plugins" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_zsh_setup"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Syntax highlighting, autosuggestions, and completions" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_zsh_setup"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Configure" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_ubuntu_sync"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_ubuntu_sync"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Runtime &amp; Backups" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_ubuntu_sync"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Install runtime, export backup, or restore archive" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_ubuntu_sync"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Ready" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <View
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_tools"
+                    style="@style/TextAppearance.Material3.LabelLarge"
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="Quick Actions"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:id="@+id/row_terminal"
-                    style="@style/PocketDev.PrefRow">
+                    android:id="@+id/card_tools"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_lsp"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_lsp"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/lsp_title" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_lsp"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Manage language servers and runtime packages" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_terminal"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="Open Ubuntu 24.04 Zsh Terminal" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_terminal"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Launch terminal directly in active project directory (/root/projects/...)" />
+                            android:id="@+id/value_lsp"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Manage" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_terminal"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Open" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_terminal"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_terminal"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Open Terminal" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_terminal"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Launch terminal in active project directory" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_terminal"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Open" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section 6: System & About -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/header_system"
-                style="@style/TextAppearance.Material3.LabelLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:text="@string/pref_section_system"
-                android:textColor="?attr/colorPrimary"
-                android:textStyle="bold" />
-
+            <!-- ============================================================ -->
+            <!-- PAGE 5: SYSTEM & ABOUT                                       -->
+            <!-- ============================================================ -->
             <LinearLayout
-                android:id="@+id/card_system"
+                android:id="@+id/page_system"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="gone">
 
-                <LinearLayout
-                    android:id="@+id/row_diag"
-                    style="@style/PocketDev.PrefRow">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_diag"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/menu_diag" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_diag"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="Verify TextMate &amp; Monarch grammars, PRoot state, and runtime logs" />
-                    </LinearLayout>
-
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_diag"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="Inspect" />
-                </LinearLayout>
-
-                <View
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/header_system"
+                    style="@style/TextAppearance.Material3.LabelLarge"
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="#1A888888" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="@string/pref_section_system"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:id="@+id/row_about"
-                    style="@style/PocketDev.PrefRow">
+                    android:id="@+id/card_system"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="14dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_notifications"
+                        style="@style/PocketDev.PrefRow"
+                        android:text="Task Notifications" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
 
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:id="@+id/row_diag"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_diag"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/menu_diag" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_diag"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Inspect system logs, runtime health, and grammars" />
+                        </LinearLayout>
 
                         <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/title_about"
-                            style="@style/PocketDev.PrefTitle"
-                            android:text="@string/about_title" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:id="@+id/sub_about"
-                            style="@style/PocketDev.PrefSubtitle"
-                            android:text="@string/about_version_text" />
+                            android:id="@+id/value_diag"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Inspect" />
                     </LinearLayout>
 
-                    <com.google.android.material.textview.MaterialTextView
-                        android:id="@+id/value_about"
-                        style="@style/PocketDev.PrefValue"
-                        android:text="v2.1" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_onboarding"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_onboarding"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="Welcome Guide" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_onboarding"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="Re-open the setup walkthrough" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_onboarding"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="Open" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1A888888" />
+
+                    <LinearLayout
+                        android:id="@+id/row_about"
+                        style="@style/PocketDev.PrefRow">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/title_about"
+                                style="@style/PocketDev.PrefTitle"
+                                android:text="@string/about_title" />
+
+                            <com.google.android.material.textview.MaterialTextView
+                                android:id="@+id/sub_about"
+                                style="@style/PocketDev.PrefSubtitle"
+                                android:text="@string/about_version_text" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/value_about"
+                            style="@style/PocketDev.PrefValue"
+                            android:text="v2.1.0" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

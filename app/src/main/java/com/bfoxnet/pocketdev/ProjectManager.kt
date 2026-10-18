@@ -9,12 +9,7 @@ import android.provider.DocumentsContract
 import java.io.File
 
 /**
- * Manages Projects directly inside the Ubuntu 24.04 rootfs directory
- * (`$filesDir/ubuntu/root/projects/<project-name>` -> `/root/projects/<project-name>` in Ubuntu Zsh)
- * where full read, write, and `+x` execution permissions are guaranteed by Android and PRoot.
- *
- * Automatically migrates any projects created in the legacy `$filesDir/workspace` folder into
- * `$filesDir/ubuntu/root/projects` so all projects live inside the Ubuntu directory.
+ * Manages projects inside the workspace directory (`/root/projects/<project-name>`).
  */
 object ProjectManager {
 
@@ -56,9 +51,6 @@ object ProjectManager {
         cachedProjectsRoot = null
     }
 
-    /**
-     * Root `/root` home directory inside the Ubuntu rootfs (`$filesDir/ubuntu/root`).
-     */
     fun ubuntuRootHomeDir(context: Context): File =
         File(UbuntuProotManager.ubuntuRootDir(context), "root").apply {
             if (!exists()) {
@@ -68,11 +60,6 @@ object ProjectManager {
             }
         }
 
-    /**
-     * Base directory inside the Ubuntu rootfs holding all user projects:
-     * Host path : `$filesDir/ubuntu/root/projects`
-     * Guest path: `/root/projects`
-     */
     fun projectsRootDir(context: Context): File {
         cachedProjectsRoot?.let { cached ->
             if (cached.exists()) return cached
@@ -91,10 +78,6 @@ object ProjectManager {
         return ubuntuProjects
     }
 
-    /**
-     * Migrates any projects from the legacy `$filesDir/workspace` directory into
-     * `$filesDir/ubuntu/root/projects` and updates `settings.localProjectPath` if needed.
-     */
     private fun migrateLegacyWorkspaceIfNeeded(context: Context, ubuntuProjectsDir: File) {
         val legacyRoot = File(context.filesDir, "workspace")
         if (!legacyRoot.exists() || !legacyRoot.isDirectory) return
@@ -122,27 +105,43 @@ object ProjectManager {
         }
     }
 
-    /** Returns the Ubuntu guest path (e.g. `/root/projects/MyApp`) for a project or folder on the host. */
     fun guestPathForDir(context: Context, dir: File): String =
         UbuntuProotManager.hostDirToGuestPath(context, dir)
 
-    /** Returns all project folders currently inside `/root/projects` (`$filesDir/ubuntu/root/projects`). */
+    /**
+     * Lists all available project directories in `/root/projects` as well as any user-created
+     * folders in `/root` so projects created via the IDE or terminal are always discoverable.
+     */
     fun listAppDirProjects(context: Context): List<File> {
         ensureDefaultLocalWorkspace(context)
+        val result = LinkedHashMap<String, File>()
         val root = projectsRootDir(context)
-        return root.listFiles()
+        root.listFiles()
             ?.filter { it.isDirectory && !it.name.startsWith(".") }
             ?.sortedBy { it.name.lowercase() }
-            ?: emptyList()
+            ?.forEach { result[it.absolutePath] = it }
+
+        val home = ubuntuRootHomeDir(context)
+        home.listFiles()
+            ?.filter {
+                it.isDirectory &&
+                    !it.name.startsWith(".") &&
+                    it.name != "projects" &&
+                    it.name != "snap"
+            }
+            ?.sortedBy { it.name.lowercase() }
+            ?.forEach { result[it.absolutePath] = it }
+
+        val active = ensureDefaultLocalWorkspace(context)
+        if (active.exists() && active.isDirectory) {
+            result[active.absolutePath] = active
+        }
+
+        return result.values.toList()
     }
 
     fun listInternalProjects(context: Context): List<File> = listAppDirProjects(context)
 
-    /**
-     * Creates a new project directory inside the Ubuntu rootfs (`/root/projects/<name>`, or a
-     * nested path inside `/root/projects/` if a relative path is supplied) with starter files
-     * and switches to it.
-     */
     fun createNewAppDirProject(context: Context, rawName: String): File? {
         val trimmed = rawName.trim()
             .removePrefix("/root/projects/")
@@ -167,7 +166,30 @@ object ProjectManager {
     fun createInternalProject(context: Context, rawName: String): File? =
         createNewAppDirProject(context, rawName)
 
-    /** Switches active project to an existing directory inside `/root/projects` (or inside `$ubuntuRoot`). */
+    /**
+     * Resolves and opens an existing project folder by name or path (e.g., `my-app`,
+     * `/root/projects/my-app`, or `~/my-app`).
+     */
+    fun openProjectByPath(context: Context, rawInput: String): File? {
+        val trimmed = rawInput.trim()
+        if (trimmed.isEmpty()) return null
+        val rootfs = UbuntuProotManager.ubuntuRootDir(context)
+        val projectsRoot = projectsRootDir(context)
+        val homeDir = ubuntuRootHomeDir(context)
+
+        val candidates = listOf(
+            File(projectsRoot, trimmed.removePrefix("/root/projects/").removePrefix("~/projects/").trim('/')),
+            File(homeDir, trimmed.removePrefix("/root/").removePrefix("~/").trim('/')),
+            File(rootfs, trimmed.trimStart('/')),
+            File(trimmed)
+        )
+        val resolved = candidates.firstOrNull {
+            it.exists() && it.isDirectory && it.absolutePath.startsWith(context.filesDir.absolutePath)
+        } ?: return null
+
+        return switchToAppDirProject(context, resolved)
+    }
+
     fun switchToAppDirProject(context: Context, projectDir: File): File {
         if (!projectDir.exists()) {
             projectDir.mkdirs()
@@ -183,10 +205,6 @@ object ProjectManager {
     fun selectInternalProject(context: Context, projectDir: File): File =
         switchToAppDirProject(context, projectDir)
 
-    /**
-     * Imports an external SAF folder into `/root/projects/<folderName>` inside the Ubuntu rootfs
-     * so all files reside in Ubuntu with full execution permissions.
-     */
     fun importSafTreeIntoAppDir(context: Context, treeUri: Uri): File? {
         return try {
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -267,12 +285,10 @@ object ProjectManager {
         }
     }
 
-    /** Legacy SAF helper that imports the SAF tree into `/root/projects` for execution permissions. */
     fun saveSafProjectTree(context: Context, treeUri: Uri): Boolean {
         return importSafTreeIntoAppDir(context, treeUri) != null
     }
 
-    /** Switches to the built-in default project folder inside `/root/projects/PocketDevProject`. */
     fun switchToLocalWorkspace(context: Context): File {
         val settings = Settings(context)
         settings.projectMode = "local"
@@ -287,14 +303,9 @@ object ProjectManager {
         return defaultRoot
     }
 
-    /** Returns the display title of the active project root inside Ubuntu `/root/projects`. */
     fun activeProjectName(context: Context): String =
         ensureDefaultLocalWorkspace(context).name
 
-    /**
-     * Ensures the active project folder is inside the Ubuntu directory (`$filesDir/ubuntu/root/projects/<name>`)
-     * so execution permissions and native Ubuntu Zsh access are always guaranteed.
-     */
     fun ensureDefaultLocalWorkspace(context: Context): File {
         cachedActiveWorkspace?.let { cached ->
             if (cached.exists() && cached.isDirectory) return cached
@@ -324,7 +335,6 @@ object ProjectManager {
         return root
     }
 
-    /** Grants read/write/execute permissions to scripts and binaries inside a project folder. */
     fun ensureProjectFilesExecutable(dir: File) {
         runCatching {
             dir.setReadable(true, false)
@@ -353,12 +363,11 @@ object ProjectManager {
                 package sample
 
                 /**
-                 * $projectName Starter Project
-                 * Ubuntu Directory: /root/projects/$projectName
-                 * Font ligatures enabled: -> => != === <= >= ::
+                 * $projectName
+                 * Workspace: /root/projects/$projectName
                  */
                 fun main() {
-                    val items = listOf("Kotlin", "Rust", "Go", "TypeScript", "Ubuntu 24.04 Zsh")
+                    val items = listOf("Kotlin", "Rust", "Go", "TypeScript", "Python")
                     items.filter { it.isNotEmpty() }
                         .forEachIndexed { index, name ->
                             println("[#${'$'}index] Ready => ${'$'}name")
@@ -374,17 +383,16 @@ object ProjectManager {
                 import "fmt"
 
                 func main() {
-                    fmt.Println("PocketDev Go service online in /root/projects/$projectName := true")
+                    fmt.Println("PocketDev Go service running in /root/projects/$projectName")
                 }
                 """.trimIndent() + "\n"
             )
 
-            val scriptFile = File(scriptsDir, "ubuntu_env_check.zsh")
+            val scriptFile = File(scriptsDir, "env_check.sh")
             scriptFile.writeText(
                 """
-                #!/usr/bin/env zsh
-                # Quick diagnostics for Ubuntu 24.04 LTS + Zsh (robbyrussell) + PRoot environment
-                echo "Project Directory: $(pwd)"
+                #!/usr/bin/env sh
+                echo "Workspace: $(pwd)"
                 uname -a
                 cat /etc/os-release 2>/dev/null || true
                 """.trimIndent() + "\n"
@@ -395,14 +403,8 @@ object ProjectManager {
                 """
                 {
                   "project": "$projectName",
-                  "ubuntuPath": "/root/projects/$projectName",
-                  "version": "2.0.0",
-                  "ligatures": true,
-                  "linuxEngine": {
-                    "runtime": "PRoot ${UbuntuProotManager.PROOT_VERSION}",
-                    "rootfs": "Ubuntu ${UbuntuProotManager.UBUNTU_VERSION} (${UbuntuProotManager.UBUNTU_CODENAME})",
-                    "shell": "zsh (robbyrussell theme, zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions)"
-                  }
+                  "path": "/root/projects/$projectName",
+                  "version": "2.1.0"
                 }
                 """.trimIndent() + "\n"
             )
@@ -411,18 +413,17 @@ object ProjectManager {
                 """
                 # $projectName
 
-                Welcome to **PocketDev**!
+                Welcome to **PocketDev**.
 
-                - **Ubuntu Project Directory**: Stored directly inside Ubuntu at `/root/projects/$projectName` with full `+x` execution permissions.
-                - **Open Terminal in Project Dir**: Tapping the Terminal button or using the folder menu opens Zsh (`robbyrussell` theme) directly in `/root/projects/$projectName`.
-                - **Real Zsh + robbyrussell Theme + Plugins**: Uses the `robbyrussell` default theme with `zsh-autosuggestions`, `zsh-syntax-highlighting`, `zsh-completions`, and `zsh-history-substring-search`.
-                - **Auto-Save & Save All**: Configurable in Settings to automatically save modified tabs or save all open files on Save press.
+                - **Workspace**: Located at `/root/projects/$projectName`.
+                - **Build & Run**: Tap the Run button in the top toolbar to compile and execute the active file.
+                - **Terminal**: Launch the integrated Ubuntu 24.04 LTS terminal directly in your project folder.
+                - **Source Control**: Manage Git branches, diffs, and commits from the sidebar.
                 """.trimIndent() + "\n"
             )
         }
     }
 
-    /** Computes a fast signature of the project directory structure to detect live file tree changes. */
     fun computeTreeSignature(context: Context): Long {
         val rootDir = ensureDefaultLocalWorkspace(context)
         var hash = 1125899906842597L
@@ -445,13 +446,11 @@ object ProjectManager {
         return hash
     }
 
-    /** Lists the root children of the active project inside `/root/projects/<name>`. */
     fun listRootNodes(context: Context): List<FileNode> {
         val rootDir = ensureDefaultLocalWorkspace(context)
         return listLocalChildren(rootDir, "", 0)
     }
 
-    /** Lists immediate children of an expandable folder [FileNode]. */
     fun listChildNodes(context: Context, parent: FileNode): List<FileNode> {
         if (!parent.isDirectory) return emptyList()
         if (parent.localFile != null) {
@@ -536,7 +535,6 @@ object ProjectManager {
         return out.sortedWith(compareBy<FileNode>({ !it.isDirectory }, { it.name.lowercase() }))
     }
 
-    /** Creates a new file or directory inside the active project root (or a target folder node). */
     fun createInProject(
         context: Context,
         parentNode: FileNode?,
@@ -581,7 +579,6 @@ object ProjectManager {
         }
     }
 
-    /** Renames a file or folder in the dynamic project tree and returns the updated [FileNode]. */
     fun renameNode(
         context: Context,
         node: FileNode,
@@ -618,7 +615,6 @@ object ProjectManager {
         }
     }
 
-    /** Deletes a file or directory node from the project. */
     fun deleteNode(context: Context, node: FileNode): Boolean {
         return try {
             if (node.localFile != null) {
@@ -633,7 +629,6 @@ object ProjectManager {
         }
     }
 
-    /** Collects all searchable text files across the active project (up to [maxFiles]). */
     fun collectAllProjectFiles(context: Context, maxFiles: Int = 2500): List<FileNode> {
         val result = ArrayList<FileNode>(256)
         val queue = ArrayDeque<FileNode>()

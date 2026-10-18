@@ -10,8 +10,7 @@ import androidx.core.view.WindowCompat
 import com.bfoxnet.pocketdev.databinding.ActivityAboutBinding
 
 /**
- * Dedicated "About" page for PocketDev with structured Runtime & Capabilities cards
- * and synchronized AppBar and StatusBar colors.
+ * Dedicated "About" page for PocketDev.
  */
 class AboutActivity : AppCompatActivity() {
 
@@ -43,13 +42,13 @@ class AboutActivity : AppCompatActivity() {
     private fun populateRuntimeDetails() {
         val abi = UbuntuProotManager.detectHostAbi()
         val uArch = UbuntuProotManager.ubuntuArch()
-        val ubuntuInstalled = if (UbuntuProotManager.isUbuntuInstalled(this)) "Installed ✓" else "Not Bootstrapped"
+        val ubuntuInstalled = if (UbuntuProotManager.isUbuntuInstalled(this)) "Ready" else "Not Installed"
         val lspInstalled = LspManager.AVAILABLE_SERVERS.count { LspManager.isInstalled(this, it.id) }
         binding.aboutRuntimeDetails.text = buildString {
-            appendLine("Host Device   : ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})")
-            appendLine("Hardware ABI  : $abi (Ubuntu $uArch rootfs)")
-            appendLine("Ubuntu 24.04  : $ubuntuInstalled • Shell: ${settings.defaultShell}")
-            append("LSP Servers   : $lspInstalled / ${LspManager.AVAILABLE_SERVERS.size} active • Editor: Sora 0.23.6")
+            appendLine("Device       : ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})")
+            appendLine("Architecture : $abi ($uArch)")
+            appendLine("Environment  : Ubuntu 24.04 LTS ($ubuntuInstalled) • Shell: ${settings.defaultShell}")
+            append("LSP Servers  : $lspInstalled of ${LspManager.AVAILABLE_SERVERS.size} installed")
         }
     }
 
@@ -76,7 +75,7 @@ class AboutActivity : AppCompatActivity() {
         val surface = Color.parseColor(theme.ui.bg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
         binding.aboutRoot.setBackgroundColor(chrome)

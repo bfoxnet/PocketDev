@@ -7,7 +7,6 @@
     android:background="@color/chrome_background"
     android:orientation="vertical">
 
-    <!-- Fixed Top AppBarLayout matching MainActivity StatusBar & AppBar chrome -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/about_appbar"
         android:layout_width="match_parent"
@@ -58,6 +57,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:text="@string/app_name"
                 android:textStyle="bold" />
 
@@ -67,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_medium"
                 android:text="@string/about_version_text" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -76,10 +76,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
+                android:fontFamily="@font/plus_jakarta_sans"
                 android:gravity="center"
                 android:text="@string/about_subtitle" />
 
-            <!-- Structured System & Architecture Summary Card -->
+            <!-- System & Architecture Summary Card -->
             <LinearLayout
                 android:id="@+id/about_runtime_card"
                 android:layout_width="match_parent"
@@ -93,8 +94,8 @@
                     style="@style/TextAppearance.Material3.LabelMedium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:text="RUNTIME &amp; ARCHITECTURE"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="SYSTEM &amp; RUNTIME"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -103,9 +104,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:fontFamily="@font/jetbrains_mono"
+                    android:fontFamily="@font/plus_jakarta_sans"
                     android:lineSpacingExtra="4dp"
-                    android:text="Ubuntu 24.04.5 LTS (Noble) • Native PRoot • Sora Editor 0.23.6" />
+                    android:text="Ubuntu 24.04 LTS • Native PRoot • Sora Editor" />
             </LinearLayout>
 
             <!-- Core Capabilities Card -->
@@ -122,8 +123,8 @@
                     style="@style/TextAppearance.Material3.LabelMedium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/jetbrains_mono"
-                    android:text="CORE IDE CAPABILITIES"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="CAPABILITIES"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -132,6 +133,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:fontFamily="@font/plus_jakarta_sans"
                     android:lineSpacingExtra="4dp"
                     android:text="@string/about_features_body" />
             </LinearLayout>
@@ -142,7 +144,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="42dp"
                 android:layout_marginTop="18dp"
-                android:text="Open System &amp; Grammar Diagnostics" />
+                android:fontFamily="@font/plus_jakarta_sans_semibold"
+                android:text="System Diagnostics" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

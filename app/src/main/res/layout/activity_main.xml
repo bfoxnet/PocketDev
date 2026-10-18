@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="false">
 
-    <!-- Main Vertical IDE Container (Receives exact statusBar + navBar/IME padding) -->
+    <!-- Main Vertical IDE Container -->
     <LinearLayout
         android:id="@+id/editor_content_root"
         android:layout_width="match_parent"
@@ -15,7 +15,7 @@
         android:background="@color/chrome_background"
         android:orientation="vertical">
 
-        <!-- 1. Compact Two-Row AppBarLayout (MaterialToolbar with Project Context + File TabLayout) -->
+        <!-- 1. Compact Two-Row AppBarLayout -->
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/editor_appbar"
             android:layout_width="match_parent"
@@ -24,7 +24,7 @@
             app:elevation="0dp"
             app:liftOnScroll="false">
 
-            <!-- Row 1: Compact MaterialToolbar ([☰] [📁 Project ▾] ... [Run ▶] [Search] [Save] [Terminal] [⋮]) -->
+            <!-- Row 1: Compact MaterialToolbar -->
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/editor_toolbar"
                 style="@style/AndroidIDE.Toolbar"
@@ -75,7 +75,7 @@
                 android:background="#26888888" />
         </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- 2. Collapsible Find & Replace Bar (Replace row collapsed by default to save vertical space) -->
+        <!-- 2. Collapsible Find & Replace Bar -->
         <LinearLayout
             android:id="@+id/find_bar"
             android:layout_width="match_parent"
@@ -97,7 +97,7 @@
                     style="@style/PocketDev.IconButton"
                     android:layout_width="34dp"
                     android:layout_height="34dp"
-                    android:contentDescription="Toggle Replace Row"
+                    android:contentDescription="Toggle Replace"
                     android:padding="7dp"
                     android:src="@drawable/ic_chevron_down" />
 
@@ -111,6 +111,7 @@
                         android:id="@+id/search_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakarta_sans"
                         android:hint="@string/search_hint"
                         android:inputType="text"
                         android:singleLine="true"
@@ -123,6 +124,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_medium"
                     android:text="@string/search_no_match"
                     android:textColor="@color/on_surface_variant" />
 
@@ -202,6 +204,7 @@
                         android:id="@+id/replace_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/plus_jakarta_sans"
                         android:hint="@string/replace_hint"
                         android:inputType="text"
                         android:singleLine="true"
@@ -214,6 +217,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginStart="6dp"
+                    android:fontFamily="@font/plus_jakarta_sans_semibold"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
@@ -227,6 +231,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginStart="4dp"
+                    android:fontFamily="@font/plus_jakarta_sans_semibold"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
@@ -236,7 +241,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 2b. VS Code-Style Sticky-Scroll Header Bar (Shows enclosing top-level class/function block) -->
+        <!-- 2b. Sticky-Scroll Header Bar -->
         <LinearLayout
             android:id="@+id/sticky_scroll_bar"
             android:layout_width="match_parent"
@@ -253,8 +258,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:fontFamily="@font/jetbrains_mono"
-                android:textColor="#FFB74D"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
+                android:textColor="@color/accent"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 tools:text="Ln 12" />
@@ -286,7 +291,7 @@
                 android:layout_height="match_parent"
                 android:background="@color/editor_surface" />
 
-            <!-- Professional Empty State when all editor tabs are closed -->
+            <!-- Empty State when all editor tabs are closed -->
             <LinearLayout
                 android:id="@+id/editor_empty_state"
                 android:layout_width="match_parent"
@@ -311,7 +316,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="No Open Editor Tabs"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
+                    android:text="No Open Files"
                     android:textStyle="bold" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -321,8 +327,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="18dp"
+                    android:fontFamily="@font/plus_jakarta_sans"
                     android:gravity="center"
-                    android:text="Create a new source file, open your project tree, or clone a GitHub repository." />
+                    android:text="Create a new file, open a project, or clone a Git repository." />
 
                 <LinearLayout
                     android:layout_width="240dp"
@@ -334,9 +341,10 @@
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="40dp"
+                        android:fontFamily="@font/plus_jakarta_sans_semibold"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="New File Tab"
+                        android:text="New File"
                         android:textSize="12sp"
                         app:icon="@drawable/ic_add" />
 
@@ -346,9 +354,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="40dp"
                         android:layout_marginTop="8dp"
+                        android:fontFamily="@font/plus_jakarta_sans_semibold"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="Open Project Explorer"
+                        android:text="Open Project"
                         android:textSize="12sp"
                         app:icon="@drawable/ic_folder_open" />
 
@@ -358,9 +367,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="40dp"
                         android:layout_marginTop="8dp"
+                        android:fontFamily="@font/plus_jakarta_sans_semibold"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="Clone GitHub Repo"
+                        android:text="Clone Repository"
                         android:textSize="12sp"
                         app:icon="@drawable/ic_git" />
                 </LinearLayout>
@@ -373,7 +383,7 @@
             android:layout_height="1dp"
             android:background="#26888888" />
 
-        <!-- 4. Compact Status Bar (Always visible, taps toggle/switch Bottom Sheet) -->
+        <!-- 4. Compact Status Bar -->
         <LinearLayout
             android:id="@+id/status_bar"
             android:layout_width="match_parent"
@@ -388,7 +398,7 @@
                 style="?attr/textAppearanceLabelSmall"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_medium"
                 android:textColor="@color/on_surface_variant"
                 tools:text="Ln 1, Col 0" />
 
@@ -400,7 +410,7 @@
                 android:layout_marginHorizontal="8dp"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_medium"
                 android:singleLine="true"
                 android:textColor="@color/on_surface_variant"
                 tools:text="✓ kotlin-lsp" />
@@ -411,7 +421,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="6dp"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_medium"
                 android:text="UTF-8"
                 android:textColor="@color/on_surface_variant" />
 
@@ -421,7 +431,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="6dp"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_semibold"
                 android:textColor="@color/on_surface_variant"
                 tools:text="KT" />
 
@@ -449,7 +459,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="3dp"
-                    android:fontFamily="@font/jetbrains_mono"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
                     android:paddingHorizontal="5dp"
                     android:text="0"
                     android:textColor="#FFFFFF"
@@ -486,7 +496,7 @@
                 android:src="@drawable/ic_chevron_up" />
         </LinearLayout>
 
-        <!-- 5. Draggable 3-Tab Bottom Sheet (Code Analysis, Search Results & Build Output with stdin) -->
+        <!-- 5. Draggable 3-Tab Bottom Sheet -->
         <LinearLayout
             android:id="@+id/bottom_panel_container"
             android:layout_width="match_parent"
@@ -500,7 +510,6 @@
                 android:layout_height="1dp"
                 android:background="#26888888" />
 
-            <!-- Touch Drag Handle Area for smooth vertical panel resizing -->
             <LinearLayout
                 android:id="@+id/bottom_sheet_drag_handle_area"
                 android:layout_width="match_parent"
@@ -533,14 +542,14 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
-                    android:contentDescription="Bottom Sheet Sections" />
+                    android:contentDescription="Output Tabs" />
 
                 <ImageButton
                     android:id="@+id/btn_bottom_sheet_stop"
                     style="@style/PocketDev.IconButton"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:contentDescription="Stop Running Build"
+                    android:contentDescription="Stop Process"
                     android:padding="6dp"
                     android:src="@drawable/ic_stop"
                     android:visibility="gone" />
@@ -550,7 +559,7 @@
                     style="@style/PocketDev.IconButton"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:contentDescription="Clear Output"
+                    android:contentDescription="Clear"
                     android:padding="6dp"
                     android:src="@drawable/ic_clear_all" />
 
@@ -559,7 +568,7 @@
                     style="@style/PocketDev.IconButton"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:contentDescription="Expand / Restore Bottom Sheet"
+                    android:contentDescription="Resize Panel"
                     android:padding="6dp"
                     android:src="@drawable/ic_expand" />
 
@@ -568,7 +577,7 @@
                     style="@style/PocketDev.IconButton"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:contentDescription="Collapse Bottom Sheet"
+                    android:contentDescription="Close Panel"
                     android:padding="6dp"
                     android:src="@drawable/ic_chevron_down" />
             </LinearLayout>
@@ -584,7 +593,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1">
 
-                <!-- Tab 0: Code Analysis (Live LSP Diagnostics) -->
+                <!-- Tab 0: Problems (Live LSP Diagnostics) -->
                 <ScrollView
                     android:id="@+id/lsp_diagnostics_scroll"
                     android:layout_width="match_parent"
@@ -615,7 +624,7 @@
                         android:paddingVertical="4dp" />
                 </ScrollView>
 
-                <!-- Tab 2: Build Output (Compile / Run Streaming Output + Interactive stdin bar) -->
+                <!-- Tab 2: Output -->
                 <LinearLayout
                     android:id="@+id/build_output_panel"
                     android:layout_width="match_parent"
@@ -638,7 +647,7 @@
                             android:paddingVertical="6dp" />
                     </ScrollView>
 
-                    <!-- Interactive stdin input bar for running CLI programs -->
+                    <!-- Interactive stdin input bar -->
                     <LinearLayout
                         android:id="@+id/build_stdin_row"
                         android:layout_width="match_parent"
@@ -652,9 +661,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="6dp"
-                            android:fontFamily="@font/jetbrains_mono"
+                            android:fontFamily="@font/plus_jakarta_sans_bold"
                             android:text="stdin ›"
-                            android:textColor="#FFB74D"
+                            android:textColor="@color/accent"
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
@@ -665,7 +674,7 @@
                             android:layout_weight="1"
                             android:background="@android:color/transparent"
                             android:fontFamily="@font/jetbrains_mono"
-                            android:hint="Send input line to running process…"
+                            android:hint="Send input to running process…"
                             android:imeOptions="actionSend"
                             android:inputType="text"
                             android:singleLine="true"
@@ -676,7 +685,7 @@
                             style="@style/PocketDev.IconButton"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            android:contentDescription="Send stdin"
+                            android:contentDescription="Send Input"
                             android:padding="6dp"
                             android:src="@drawable/ic_send" />
                     </LinearLayout>
@@ -684,7 +693,7 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- 6. Merged Single-Row Keyboard Accessory Bar ([SYM / EDIT] Mode Switcher + Active Strip, auto-hides when IME is closed) -->
+        <!-- 6. Merged Single-Row Keyboard Accessory Bar -->
         <LinearLayout
             android:id="@+id/keyboard_dock_container"
             android:layout_width="match_parent"
@@ -699,11 +708,11 @@
                 android:layout_height="30dp"
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="4dp"
-                android:fontFamily="@font/jetbrains_mono"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
                 android:gravity="center"
                 android:paddingHorizontal="8dp"
                 android:text="SYM ⇄"
-                android:textColor="#FFB74D"
+                android:textColor="@color/accent"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -719,7 +728,7 @@
                     android:layout_height="match_parent"
                     android:background="@color/symbol_bar" />
 
-                <!-- Mode 1: Focused Edit Quick Action Bar (De-duplicated from Top Toolbar) -->
+                <!-- Mode 1: Focused Edit Quick Action Bar -->
                 <HorizontalScrollView
                     android:id="@+id/quick_action_bar"
                     android:layout_width="match_parent"
@@ -740,7 +749,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Start Navigation Drawer: Unified Project Explorer, Git Source Control & Document Outline -->
+    <!-- Start Navigation Drawer: Unified Project Explorer, Git & Outline -->
     <LinearLayout
         android:id="@+id/project_sidebar"
         android:layout_width="312dp"
@@ -776,6 +785,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
+                    android:fontFamily="@font/plus_jakarta_sans_bold"
                     android:singleLine="true"
                     android:text="@string/project_explorer_title"
                     android:textStyle="bold" />
@@ -786,9 +796,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
-                    android:fontFamily="@font/jetbrains_mono"
+                    android:fontFamily="@font/plus_jakarta_sans"
                     android:singleLine="true"
-                    android:text="Tap to switch or import project ▾"
+                    android:text="Tap to switch or open project ▾"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="10.5sp" />
             </LinearLayout>
@@ -798,7 +808,7 @@
                 style="@style/PocketDev.IconButton"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:contentDescription="Switch or Import Project"
+                android:contentDescription="Open Project"
                 android:padding="6dp"
                 android:src="@drawable/ic_folder_open" />
 
@@ -826,7 +836,7 @@
                 style="@style/PocketDev.IconButton"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:contentDescription="Refresh Drawer"
+                android:contentDescription="Refresh"
                 android:padding="6dp"
                 android:src="@drawable/ic_refresh" />
         </LinearLayout>
@@ -866,6 +876,7 @@
                 android:layout_marginHorizontal="10dp"
                 android:layout_marginVertical="4dp"
                 android:background="@android:color/transparent"
+                android:fontFamily="@font/plus_jakarta_sans"
                 android:hint="@string/filter_files_hint"
                 android:inputType="text"
                 android:paddingHorizontal="6dp"

@@ -10,8 +10,7 @@ import android.widget.RemoteViews
 import java.io.File
 
 /**
- * Home-screen AppWidget ("Continue Coding") that displays the last opened project and active
- * file, and deep-links directly into `MainActivity` to resume editing or launch the terminal.
+ * Home-screen AppWidget ("Continue Coding").
  */
 class ContinueCodingWidgetProvider : AppWidgetProvider() {
 
@@ -65,13 +64,9 @@ class ContinueCodingWidgetProvider : AppWidgetProvider() {
             val projPath = settings.lastWidgetProjectPath
 
             val views = RemoteViews(context.packageName, R.layout.widget_continue_coding)
-            views.setTextViewText(R.id.widgetTitle, "Continue Coding • $projName")
+            views.setTextViewText(R.id.widgetTitle, projName)
             views.setTextViewText(R.id.widgetSubtitle, fileName)
-            views.setTextViewText(
-                R.id.widgetMeta,
-                if (UbuntuProotManager.isUbuntuInstalled(context)) "Ubuntu 24.04 PRoot Ready • Tap to resume"
-                else "PocketDev Workspace • Tap to open editor"
-            )
+            views.setTextViewText(R.id.widgetMeta, "Tap to resume editing")
 
             val openEditorIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

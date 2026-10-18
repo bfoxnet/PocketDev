@@ -24,8 +24,7 @@ import com.google.android.material.textview.MaterialTextView
 import kotlin.math.roundToInt
 
 /**
- * Dedicated "Language Server Protocol" page with category filter pills (`All`, `Installed`, `Popular`),
- * accurate binary installation states, and a themed Material 3 Bottom Sheet JSON-RPC inspector.
+ * Language Servers management page (`LspActivity`).
  */
 class LspActivity : AppCompatActivity() {
 
@@ -83,7 +82,7 @@ class LspActivity : AppCompatActivity() {
     private fun updateSubtitle() {
         val total = LspManager.AVAILABLE_SERVERS.size
         val installed = LspManager.AVAILABLE_SERVERS.count { LspManager.isInstalled(this, it.id) }
-        binding.toolbar.subtitle = "$installed of $total installed (stdio JSON-RPC 2.0)"
+        binding.toolbar.subtitle = "$installed of $total installed"
     }
 
     private fun setupListeners() {
@@ -121,7 +120,7 @@ class LspActivity : AppCompatActivity() {
         val theme = EditorController.themeById(settings.editorTheme)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
         val chips = listOf(
@@ -131,7 +130,7 @@ class LspActivity : AppCompatActivity() {
         )
         for ((chip, active) in chips) {
             chip.setTextColor(if (active) accent else fg)
-            chip.setTypeface(chip.typeface, if (active) Typeface.BOLD else Typeface.NORMAL)
+            chip.typeface = if (active) ModernUiHelper.appFontBold(this) else ModernUiHelper.appFontMedium(this)
             chip.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 14f * density
@@ -187,7 +186,7 @@ class LspActivity : AppCompatActivity() {
         val cardBg = Color.parseColor(theme.ui.chromeBg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = ModernUiHelper.PRIMARY_COLOR
         val density = resources.displayMetrics.density
 
         val popularIds = setOf("pyright", "typescript-language-server", "clangd", "gopls", "rust-analyzer", "kotlin-language-server")
@@ -209,8 +208,9 @@ class LspActivity : AppCompatActivity() {
 
         if (servers.isEmpty()) {
             val emptyTv = MaterialTextView(this).apply {
-                text = "No language servers match your current filter."
+                text = "No matching language servers found."
                 textSize = 13f
+                typeface = ModernUiHelper.appFontRegular(this@LspActivity)
                 setTextColor(subtle)
                 gravity = Gravity.CENTER
                 setPadding(0, (32 * density).toInt(), 0, (32 * density).toInt())
@@ -251,7 +251,6 @@ class LspActivity : AppCompatActivity() {
                 }
             }
 
-            // Header row: Material Icon + Name/Version + Status Pill
             val topRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -276,12 +275,12 @@ class LspActivity : AppCompatActivity() {
                 text = "${server.name} (v${server.version})"
                 textSize = 14f
                 setTextColor(fg)
-                setTypeface(typeface, Typeface.BOLD)
+                typeface = ModernUiHelper.appFontBold(this@LspActivity)
             }
             val cmdView = MaterialTextView(this).apply {
-                text = "Exts: ${server.extensions.joinToString(", ") { ".$it" }}  •  Packages: ${server.alpinePackages.joinToString(", ")}"
-                textSize = 10.5f
-                typeface = Typeface.MONOSPACE
+                text = "Extensions: ${server.extensions.joinToString(", ") { ".$it" }}  •  Packages: ${server.alpinePackages.joinToString(", ")}"
+                textSize = 11f
+                typeface = ModernUiHelper.appFontRegular(this@LspActivity)
                 setTextColor(subtle)
             }
             titleCol.addView(nameView)
@@ -296,8 +295,7 @@ class LspActivity : AppCompatActivity() {
                     else -> "AVAILABLE"
                 }
                 textSize = 10f
-                typeface = Typeface.MONOSPACE
-                setTypeface(typeface, Typeface.BOLD)
+                typeface = ModernUiHelper.appFontBold(this@LspActivity)
                 setTextColor(
                     when {
                         installed && enabled -> Color.parseColor("#66BB6A")
@@ -310,16 +308,15 @@ class LspActivity : AppCompatActivity() {
             topRow.addView(statusView)
             card.addView(topRow)
 
-            // Description
             val descView = MaterialTextView(this).apply {
                 text = server.description
                 textSize = 12f
+                typeface = ModernUiHelper.appFontRegular(this@LspActivity)
                 setTextColor(fg)
                 setPadding(0, (6 * density).toInt(), 0, (8 * density).toInt())
             }
             card.addView(descView)
 
-            // Action Buttons Row
             val btnRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -331,9 +328,10 @@ class LspActivity : AppCompatActivity() {
                     null,
                     com.google.android.material.R.attr.materialButtonStyle
                 ).apply {
-                    text = if (pending) "Resume Install in Terminal" else "Install LSP + Toolchain"
+                    text = if (pending) "Resume Install" else "Install"
                     textSize = 11.5f
                     isAllCaps = false
+                    typeface = ModernUiHelper.appFontBold(this@LspActivity)
                     minHeight = (36 * density).toInt()
                     minimumHeight = (36 * density).toInt()
                     setOnClickListener {
@@ -352,6 +350,7 @@ class LspActivity : AppCompatActivity() {
                     text = if (enabled) "Pause" else "Enable"
                     textSize = 11.5f
                     isAllCaps = false
+                    typeface = ModernUiHelper.appFontSemiBold(this@LspActivity)
                     minHeight = (36 * density).toInt()
                     minimumHeight = (36 * density).toInt()
                     setOnClickListener {
@@ -366,9 +365,10 @@ class LspActivity : AppCompatActivity() {
                     null,
                     com.google.android.material.R.attr.materialButtonOutlinedStyle
                 ).apply {
-                    text = "JSON-RPC"
+                    text = "Inspect"
                     textSize = 11.5f
                     isAllCaps = false
+                    typeface = ModernUiHelper.appFontSemiBold(this@LspActivity)
                     minHeight = (36 * density).toInt()
                     minimumHeight = (36 * density).toInt()
                     layoutParams = LinearLayout.LayoutParams(
@@ -391,6 +391,7 @@ class LspActivity : AppCompatActivity() {
                     text = "Uninstall"
                     textSize = 11.5f
                     isAllCaps = false
+                    typeface = ModernUiHelper.appFontSemiBold(this@LspActivity)
                     minHeight = (36 * density).toInt()
                     minimumHeight = (36 * density).toInt()
                     layoutParams = LinearLayout.LayoutParams(
@@ -412,9 +413,6 @@ class LspActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Themed Material 3 Bottom Sheet JSON-RPC 2.0 Exchange Inspector (replaces raw unstyled AlertDialog).
-     */
     private fun showJsonRpcDialog(server: LspManager.LspServerSpec) {
         val sampleDiags = LspManager.analyzeDocument(
             server,
@@ -432,9 +430,9 @@ class LspActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = "${server.name} • JSON-RPC 2.0 Inspector"
+            text = "${server.name} • Protocol Inspector"
             textSize = 15.5f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(this@LspActivity)
             setTextColor(palette.fgColor)
             setPadding(0, 0, 0, dp(8))
         }
@@ -472,15 +470,15 @@ class LspActivity : AppCompatActivity() {
         }
 
         val copyBtn = TextView(this).apply {
-            text = "Copy JSON-RPC"
+            text = "Copy"
             textSize = 12.5f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(this@LspActivity)
             setTextColor(palette.accentColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
             setOnClickListener {
                 val cb = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 cb?.setPrimaryClip(ClipData.newPlainText("JSON-RPC", payload))
-                Toast.makeText(this@LspActivity, "Copied JSON-RPC payload ✓", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@LspActivity, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             }
         }
         btnRow.addView(copyBtn)
@@ -488,8 +486,8 @@ class LspActivity : AppCompatActivity() {
         val closeBtn = TextView(this).apply {
             text = "Close"
             textSize = 12.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            typeface = ModernUiHelper.appFontBold(this@LspActivity)
+            setTextColor(Color.WHITE)
             setPadding(dp(16), dp(8), dp(16), dp(8))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE

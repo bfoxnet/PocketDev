@@ -20,17 +20,64 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.annotation.DrawableRes
+import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 
 /**
- * Modern Material 3 Bottom Sheet, Context Menu, Action Sheet, Confirmation Dialog, Input Dialog,
- * and Choice Picker UI builder.
- *
- * Uses bottom-anchored `Dialog` windows (`Gravity.BOTTOM`) with a top handle pill, rounded 22dp
- * corners, and 46dp+ touch targets—avoiding `CoordinatorLayout` / `BottomSheetBehavior` scroll conflicts.
+ * Material 3 Bottom Sheet, Context Menu, Confirmation Dialog, Input Dialog,
+ * Choice Picker, and App Typography (`Plus Jakarta Sans`) helper.
  */
 object ModernUiHelper {
+
+    const val PRIMARY_COLOR_HEX = "#00695C"
+    const val PRIMARY_LIGHT_HEX = "#26A69A"
+    val PRIMARY_COLOR: Int = Color.parseColor(PRIMARY_COLOR_HEX)
+    val PRIMARY_LIGHT_COLOR: Int = Color.parseColor(PRIMARY_LIGHT_HEX)
+
+    @Volatile
+    private var cachedRegular: Typeface? = null
+
+    @Volatile
+    private var cachedMedium: Typeface? = null
+
+    @Volatile
+    private var cachedSemiBold: Typeface? = null
+
+    @Volatile
+    private var cachedBold: Typeface? = null
+
+    fun appFontRegular(context: Context): Typeface {
+        cachedRegular?.let { return it }
+        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans) }.getOrNull()
+            ?: Typeface.SANS_SERIF
+        cachedRegular = tf
+        return tf
+    }
+
+    fun appFontMedium(context: Context): Typeface {
+        cachedMedium?.let { return it }
+        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_medium) }.getOrNull()
+            ?: Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        cachedMedium = tf
+        return tf
+    }
+
+    fun appFontSemiBold(context: Context): Typeface {
+        cachedSemiBold?.let { return it }
+        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_semibold) }.getOrNull()
+            ?: Typeface.create("sans-serif-medium", Typeface.BOLD)
+        cachedSemiBold = tf
+        return tf
+    }
+
+    fun appFontBold(context: Context): Typeface {
+        cachedBold?.let { return it }
+        val tf = runCatching { ResourcesCompat.getFont(context, R.font.plus_jakarta_sans_bold) }.getOrNull()
+            ?: Typeface.DEFAULT_BOLD
+        cachedBold = tf
+        return tf
+    }
 
     data class MenuOption(
         val id: Int,
@@ -52,26 +99,14 @@ object ModernUiHelper {
         val borderColor: Int,
         val destructiveColor: Int = Color.parseColor("#FF6B6B")
     ) {
-        /** Card/dialog background (same as [cardBg]). */
         val bgColor: Int get() = cardBg
-
-        /** Card background for inner panels (same as [cardBg]). */
         val cardColor: Int get() = cardBg
-
-        /** Border/stroke color for outlined views. */
         val strokeColor: Int get() = borderColor
-
-        /** Subtle secondary text color. */
         val subColor: Int get() = subtleColor
-
-        /** Input field background (slightly lighter than card bg). */
         val inputBgColor: Int get() = surfaceBg
-
-        /** True when the active editor theme is a dark theme. */
         val isDark: Boolean get() = isColorDark(cardBg)
     }
 
-    /** Rough perceived-brightness check used for [Palette.isDark]. */
     fun isColorDark(color: Int): Boolean {
         val r = (color shr 16) and 0xFF
         val g = (color shr 8) and 0xFF
@@ -86,7 +121,7 @@ object ModernUiHelper {
         val surfaceBg = Color.parseColor(theme.ui.bg)
         val fg = Color.parseColor(theme.ui.fg)
         val subtle = Color.parseColor(theme.ui.lineNumActive)
-        val accent = if (theme.dark) Color.parseColor("#FFB74D") else Color.parseColor("#E66000")
+        val accent = PRIMARY_COLOR
         val border = if (theme.dark) Color.parseColor("#338899AA") else Color.parseColor("#33666666")
         return Palette(
             cardBg = cardBg,
@@ -98,10 +133,6 @@ object ModernUiHelper {
         )
     }
 
-    /**
-     * Wraps any custom [contentView] inside a bottom-anchored Material 3 sheet [Dialog] with a top
-     * handle pill and rounded 22dp corners.
-     */
     fun showModernCustomBottomSheet(
         context: Context,
         contentView: View,
@@ -153,9 +184,6 @@ object ModernUiHelper {
         return dialog
     }
 
-    /**
-     * Shows a modern Material 3 confirmation dialog for File and Folder deletion (or project/environment actions).
-     */
     fun showModernConfirmDialog(
         context: Context,
         title: String,
@@ -223,7 +251,7 @@ object ModernUiHelper {
             text = title
             textSize = 15.5f
             setTextColor(palette.fgColor)
-            setTypeface(typeface, Typeface.BOLD)
+            typeface = appFontBold(context)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         headerRow.addView(titleView)
@@ -232,6 +260,7 @@ object ModernUiHelper {
         val messageView = MaterialTextView(context).apply {
             text = message
             textSize = 13f
+            typeface = appFontRegular(context)
             setTextColor(palette.subtleColor)
             setLineSpacing(2.5f * density, 1.08f)
             setPadding(0, (12 * density).toInt(), 0, (16 * density).toInt())
@@ -252,6 +281,7 @@ object ModernUiHelper {
             text = cancelText
             textSize = 12.5f
             isAllCaps = false
+            typeface = appFontSemiBold(context)
             setTextColor(palette.subtleColor)
             minHeight = (40 * density).toInt()
             minimumHeight = (40 * density).toInt()
@@ -267,10 +297,11 @@ object ModernUiHelper {
             text = confirmText
             textSize = 12.5f
             isAllCaps = false
+            typeface = appFontBold(context)
             minHeight = (40 * density).toInt()
             minimumHeight = (40 * density).toInt()
             backgroundTintList = ColorStateList.valueOf(actionColor)
-            setTextColor(if (isDestructive) Color.WHITE else palette.surfaceBg)
+            setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -290,10 +321,6 @@ object ModernUiHelper {
         dialog.show()
     }
 
-    /**
-     * Displays a sleek bottom-anchored Material 3 action menu with a handle pill, optional header icon,
-     * subtitle, accessible 46dp+ touch rows, vector icons, and destructive item styling.
-     */
     fun showModernContextMenu(
         context: Context,
         title: String,
@@ -333,7 +360,6 @@ object ModernUiHelper {
         }
         rootCard.addView(dragPill)
 
-        // Header section
         val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -382,7 +408,7 @@ object ModernUiHelper {
             text = title
             textSize = 15f
             setTextColor(palette.fgColor)
-            setTypeface(typeface, Typeface.BOLD)
+            typeface = appFontBold(context)
             setSingleLine(true)
         }
         titleCol.addView(titleView)
@@ -391,7 +417,7 @@ object ModernUiHelper {
             val subView = MaterialTextView(context).apply {
                 text = subtitle
                 textSize = 11.5f
-                typeface = Typeface.MONOSPACE
+                typeface = appFontRegular(context)
                 setTextColor(palette.subtleColor)
                 setSingleLine(true)
             }
@@ -411,7 +437,6 @@ object ModernUiHelper {
         }
         rootCard.addView(divider)
 
-        // Scrollable options container
         val scroll = ScrollView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -492,7 +517,7 @@ object ModernUiHelper {
                 text = opt.title
                 textSize = 13.5f
                 setTextColor(itemColor)
-                setTypeface(typeface, if (opt.isSelected || opt.isDestructive) Typeface.BOLD else Typeface.NORMAL)
+                typeface = if (opt.isSelected || opt.isDestructive) appFontBold(context) else appFontMedium(context)
             }
             textCol.addView(label)
 
@@ -500,6 +525,7 @@ object ModernUiHelper {
                 val sub = MaterialTextView(context).apply {
                     text = opt.subtitle
                     textSize = 11.5f
+                    typeface = appFontRegular(context)
                     setTextColor(palette.subtleColor)
                 }
                 textCol.addView(sub)
@@ -511,7 +537,7 @@ object ModernUiHelper {
                     text = opt.badgeText
                     textSize = 10f
                     setTextColor(palette.accentColor)
-                    setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+                    typeface = appFontBold(context)
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = 6f * density
@@ -537,7 +563,7 @@ object ModernUiHelper {
                     text = "✓"
                     textSize = 14f
                     setTextColor(palette.accentColor)
-                    setTypeface(typeface, Typeface.BOLD)
+                    typeface = appFontBold(context)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -557,9 +583,6 @@ object ModernUiHelper {
         dialog.show()
     }
 
-    /**
-     * Shows a modern single-choice picker sheet with a check indicator on the active item.
-     */
     fun showModernSingleChoiceDialog(
         context: Context,
         title: String,
@@ -600,9 +623,6 @@ object ModernUiHelper {
         )
     }
 
-    /**
-     * Shows a modern Material 3 text input dialog (for Rename File/Folder, New File/Folder, New Project, etc.).
-     */
     fun showModernInputDialog(
         context: Context,
         title: String,
@@ -640,7 +660,7 @@ object ModernUiHelper {
             text = title
             textSize = 15.5f
             setTextColor(palette.fgColor)
-            setTypeface(typeface, Typeface.BOLD)
+            typeface = appFontBold(context)
         }
         rootCard.addView(titleView)
 
@@ -648,6 +668,7 @@ object ModernUiHelper {
             val subView = MaterialTextView(context).apply {
                 text = subtitle
                 textSize = 11.5f
+                typeface = appFontRegular(context)
                 setTextColor(palette.subtleColor)
                 setPadding(0, (3 * density).toInt(), 0, 0)
             }
@@ -658,7 +679,7 @@ object ModernUiHelper {
             setText(initialValue)
             this.hint = hint
             textSize = 13.5f
-            typeface = Typeface.MONOSPACE
+            typeface = appFontMedium(context)
             setTextColor(palette.fgColor)
             setHintTextColor(palette.subtleColor)
             setSingleLine(true)
@@ -708,6 +729,7 @@ object ModernUiHelper {
                 text = neutralText
                 textSize = 12f
                 isAllCaps = false
+                typeface = appFontSemiBold(context)
                 setTextColor(palette.accentColor)
                 minHeight = (38 * density).toInt()
                 minimumHeight = (38 * density).toInt()
@@ -733,6 +755,7 @@ object ModernUiHelper {
             text = context.getString(android.R.string.cancel)
             textSize = 12f
             isAllCaps = false
+            typeface = appFontSemiBold(context)
             setTextColor(palette.subtleColor)
             minHeight = (38 * density).toInt()
             minimumHeight = (38 * density).toInt()
@@ -748,10 +771,11 @@ object ModernUiHelper {
             text = positiveText
             textSize = 12f
             isAllCaps = false
+            typeface = appFontBold(context)
             minHeight = (38 * density).toInt()
             minimumHeight = (38 * density).toInt()
             backgroundTintList = ColorStateList.valueOf(palette.accentColor)
-            setTextColor(palette.surfaceBg)
+            setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT

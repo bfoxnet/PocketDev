@@ -25,20 +25,14 @@ import androidx.appcompat.widget.TooltipCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.GravityCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.bfoxnet.pocketdev.databinding.ActivityTerminalBinding
 import com.google.android.material.textview.MaterialTextView
 import java.io.File
 import kotlin.math.roundToInt
 
 /**
- * Termux (`https://github.com/termux/termux-app` `TermuxActivity`) implementation
- * powered by a real Ubuntu 24.04.5 LTS (`noble`) rootfs + native Android `PRoot` (`UbuntuProotManager`).
- *
- * Upgraded UX:
- * - Includes a compact top session strip (`@+id/terminal_top_bar`) with a 1-tap `← Editor` return chip,
- *   horizontal clickable session tabs (`[1] zsh`), `+ New Session`, and `☰ Drawer` button.
- * - Includes an explicit `[Aa]` button (`@+id/btn_toolbar_drawer`) on the helper keyboard bar to toggle
- *   between the 2-row Extra Keys grid and the full-line Command Text Input bar.
+ * Integrated Linux Terminal Activity (`TerminalActivity`).
  */
 class TerminalActivity : AppCompatActivity() {
 
@@ -79,7 +73,6 @@ class TerminalActivity : AppCompatActivity() {
         AlpineLinuxEnvironment.provisionEnvironment(this)
         termuxProps = AlpineLinuxEnvironment.loadTermuxProperties(this)
 
-        // Restore persisted terminal states from Settings
         activeStyleIndex = settings.terminalStyleIndex.coerceIn(0, TERMUX_STYLES.lastIndex)
         toolbarVisible = settings.terminalToolbarVisible
         keepScreenOnEnabled = settings.terminalKeepScreenOn
@@ -92,7 +85,6 @@ class TerminalActivity : AppCompatActivity() {
         setupTerminalViewCallbacks()
         reloadTermuxPropertiesAndStyle()
 
-        // Restore existing running sessions or create initial session in the requested project directory
         val autorunCmd = intent?.getStringExtra(EXTRA_AUTORUN_CMD)
             ?: intent?.getStringExtra(EXTRA_INITIAL_COMMAND)
         val requestedWorkDir = intent?.getStringExtra(EXTRA_WORKING_DIR)
@@ -110,7 +102,6 @@ class TerminalActivity : AppCompatActivity() {
                 initialWorkingDir = requestedWorkDir
             )
         } else {
-            // Rebind callbacks for all alive sessions to this Activity instance
             persistentSessions.forEach { bindSessionCallbacks(it) }
             val targetIdx = persistentActiveSessionIndex.coerceIn(0, persistentSessions.lastIndex)
             switchToSession(targetIdx)
@@ -147,7 +138,6 @@ class TerminalActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        // Detach view reference without destroying running sessions!
         binding.terminalView.session = null
         persistentSessions.forEach { s ->
             s.onTitleChanged = null
@@ -165,19 +155,19 @@ class TerminalActivity : AppCompatActivity() {
         persistentSessions.getOrNull(persistentActiveSessionIndex)
 
     private fun updateDrawerHeaderSubtitle() {
-        binding.drawerTitle.text = "Ubuntu 24.04 • Zsh (robbyrussell) + PRoot"
-        val status = if (UbuntuProotManager.isUbuntuInstalled(this)) "Zsh Ready ✓" else "Run ubuntu-bootstrap"
-        binding.drawerSubtitle.text = "Ubuntu ${UbuntuProotManager.ubuntuArch()} (${UbuntuProotManager.detectHostAbi()}) • $status"
+        binding.drawerTitle.text = "Terminal"
+        val status = if (UbuntuProotManager.isUbuntuInstalled(this)) "Ready" else "Setup required"
+        binding.drawerSubtitle.text = "Ubuntu 24.04 LTS • $status"
     }
 
     private fun setupInsets() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.terminalDrawerLayout) { _, insets ->
             val sysBars = insets.getInsets(
-                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                WindowInsetsCompat.Type.systemBars() or
                     androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             )
-            val imeBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            val imeBars = insets.getInsets(WindowInsetsCompat.Type.ime())
             val bottomPadding = maxOf(sysBars.bottom, imeBars.bottom)
 
             binding.terminalRoot.setPadding(
@@ -197,11 +187,11 @@ class TerminalActivity : AppCompatActivity() {
     }
 
     private fun setupDrawerAndToolbarControls() {
-        TooltipCompat.setTooltipText(binding.btnTopEditorBack, "Return to Code Editor")
-        TooltipCompat.setTooltipText(binding.btnTopNewSession, "New Terminal Session (Long-press: Named/Failsafe)")
-        TooltipCompat.setTooltipText(binding.btnTopDrawer, "Open Session Drawer")
-        TooltipCompat.setTooltipText(binding.btnToolbarDrawer, "Switch Between Extra Keys & Command Input Bar")
-        TooltipCompat.setTooltipText(binding.btnToolbarBack, "Return to Code Editor")
+        TooltipCompat.setTooltipText(binding.btnTopEditorBack, "Back to Editor")
+        TooltipCompat.setTooltipText(binding.btnTopNewSession, "New Session")
+        TooltipCompat.setTooltipText(binding.btnTopDrawer, "Sessions")
+        TooltipCompat.setTooltipText(binding.btnToolbarDrawer, "Command Input")
+        TooltipCompat.setTooltipText(binding.btnToolbarBack, "Back to Editor")
 
         binding.btnTopEditorBack.setOnClickListener {
             finish()
@@ -221,7 +211,6 @@ class TerminalActivity : AppCompatActivity() {
             }
         }
 
-        // Bottom helper bar top-left button toggles between Extra Keys grid (Page 0) and Command Input bar (Page 1)
         binding.btnToolbarDrawer.setOnClickListener { v ->
             OnboardingAndHapticsHelper.performExtraKeyHaptic(this, v)
             showExtraKeysPage(if (isTextInputPageActive) 0 else 1)
@@ -243,7 +232,11 @@ class TerminalActivity : AppCompatActivity() {
         }
         binding.btnDrawerSettings.setOnClickListener {
             binding.terminalDrawerLayout.closeDrawer(GravityCompat.START)
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(
+                Intent(this, SettingsActivity::class.java).apply {
+                    putExtra(SettingsActivity.EXTRA_INITIAL_PAGE, SettingsActivity.PAGE_TERMINAL)
+                }
+            )
         }
 
         binding.btnTerminalSelectAll.setOnClickListener {
@@ -312,7 +305,7 @@ class TerminalActivity : AppCompatActivity() {
             if (active) {
                 val count = selectedText.length
                 binding.terminalSelectionStatus.text =
-                    if (count > 0) "$count chars selected" else "Drag handles to select text"
+                    if (count > 0) "$count characters selected" else "Drag handles to select text"
             }
         }
         binding.terminalView.onFontSizeChanged = { newSizeSp ->
@@ -374,8 +367,7 @@ class TerminalActivity : AppCompatActivity() {
             val btn = MaterialTextView(this).apply {
                 text = displayLabel
                 textSize = 11f
-                typeface = Typeface.MONOSPACE
-                setTypeface(typeface, Typeface.BOLD)
+                typeface = ModernUiHelper.appFontBold(this@TerminalActivity)
                 setTextColor(fgColor)
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
@@ -548,7 +540,7 @@ class TerminalActivity : AppCompatActivity() {
         toolbarVisible = !toolbarVisible
         settings.terminalToolbarVisible = toolbarVisible
         binding.extraKeysContainer.visibility = if (toolbarVisible) View.VISIBLE else View.GONE
-        showTermuxToast(if (toolbarVisible) "Enabling terminal toolbar" else "Disabling terminal toolbar")
+        showTermuxToast(if (toolbarVisible) "Extra keys toolbar shown" else "Extra keys toolbar hidden")
     }
 
     private fun showTermuxToast(text: String, longDuration: Boolean = false) {
@@ -560,8 +552,6 @@ class TerminalActivity : AppCompatActivity() {
         }
     }
 
-    // ---------------------------------------------------------------- Persistent Session Management & Top Tab Strip
-
     private fun bindSessionCallbacks(session: TerminalSession) {
         session.onTitleChanged = {
             runOnUiThread { renderSessionsDrawerList() }
@@ -571,7 +561,7 @@ class TerminalActivity : AppCompatActivity() {
         }
         session.onCopyToClipboard = { text ->
             runOnUiThread {
-                binding.terminalView.copyToClipboard("Termux OSC52", text)
+                binding.terminalView.copyToClipboard("Terminal", text)
             }
         }
         session.onTermuxIpcEvent = { action, arg ->
@@ -595,7 +585,7 @@ class TerminalActivity : AppCompatActivity() {
         initialWorkingDir: File? = null
     ) {
         if (persistentSessions.size >= MAX_SESSIONS) {
-            showTermuxToast("Max terminal sessions reached ($MAX_SESSIONS)")
+            showTermuxToast("Maximum sessions reached ($MAX_SESSIONS)")
             return
         }
         val defaultTitle = if (isFailsafe) "sh" else "zsh"
@@ -673,12 +663,10 @@ class TerminalActivity : AppCompatActivity() {
                 }
             }
 
-            // 1. Render Top Session Tab Pill
             val topTabPill = MaterialTextView(this).apply {
                 text = displayTitle
                 textSize = 11f
-                typeface = Typeface.MONOSPACE
-                setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
+                typeface = if (isActive) ModernUiHelper.appFontBold(this@TerminalActivity) else ModernUiHelper.appFontMedium(this@TerminalActivity)
                 setTextColor(if (isActive) accentColor else keyFgColor)
                 gravity = Gravity.CENTER
                 setPadding(dp(10), dp(4), dp(10), dp(4))
@@ -706,7 +694,6 @@ class TerminalActivity : AppCompatActivity() {
             }
             topTabsContainer.addView(topTabPill)
 
-            // 2. Render Drawer Row
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -743,9 +730,8 @@ class TerminalActivity : AppCompatActivity() {
             val labelView = MaterialTextView(this).apply {
                 text = displayTitle
                 textSize = 13f
-                typeface = Typeface.MONOSPACE
+                typeface = if (isActive) ModernUiHelper.appFontBold(this@TerminalActivity) else ModernUiHelper.appFontMedium(this@TerminalActivity)
                 setTextColor(if (isActive) accentColor else Color.WHITE)
-                setTypeface(typeface, if (isActive) Typeface.BOLD else Typeface.NORMAL)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
             row.addView(labelView)
@@ -757,11 +743,11 @@ class TerminalActivity : AppCompatActivity() {
     private fun showCreateNamedSessionDialog() {
         ModernUiHelper.showModernInputDialog(
             context = this,
-            title = "Create Named Session",
-            subtitle = "Start a new persistent Ubuntu 24.04 Zsh or failsafe sh session",
-            hint = "Session name (optional)",
+            title = "New Session",
+            subtitle = "Enter an optional name for the terminal session",
+            hint = "Session name",
             positiveText = "Create",
-            neutralText = "Failsafe",
+            neutralText = "Failsafe Shell",
             palette = currentTerminalDialogPalette(),
             onNeutral = { name ->
                 binding.terminalDrawerLayout.closeDrawer(GravityCompat.START)
@@ -777,12 +763,12 @@ class TerminalActivity : AppCompatActivity() {
     private fun showRenameSessionDialog(session: TerminalSession) {
         ModernUiHelper.showModernInputDialog(
             context = this,
-            title = "Set Session Title",
+            title = "Rename Session",
             subtitle = "PID ${session.getPid()} • ${session.title}",
             initialValue = session.sessionName ?: "",
             hint = "Session name",
             positiveText = "Save",
-            neutralText = "Kill Session",
+            neutralText = "Close Session",
             palette = currentTerminalDialogPalette(),
             onNeutral = {
                 session.finishIfRunning()
@@ -802,8 +788,8 @@ class TerminalActivity : AppCompatActivity() {
         val options = listOf(
             ModernUiHelper.MenuOption(
                 id = 0,
-                title = if (hasSelection) "Copy Selected Text" else "Select & Copy",
-                subtitle = if (hasSelection) "Copy highlighted text to clipboard" else "Select specific lines or text on terminal",
+                title = if (hasSelection) "Copy Selection" else "Select Text",
+                subtitle = if (hasSelection) "Copy highlighted text to clipboard" else "Select text in terminal",
                 iconRes = R.drawable.ic_select_all,
                 action = {
                     if (hasSelection) {
@@ -815,7 +801,7 @@ class TerminalActivity : AppCompatActivity() {
             ),
             ModernUiHelper.MenuOption(
                 id = 1,
-                title = "Copy",
+                title = "Copy Output",
                 subtitle = "Copy terminal output to clipboard",
                 iconRes = R.drawable.ic_copy,
                 action = {
@@ -825,7 +811,7 @@ class TerminalActivity : AppCompatActivity() {
             ModernUiHelper.MenuOption(
                 id = 2,
                 title = "Paste",
-                subtitle = "Paste clipboard into session [${persistentActiveSessionIndex + 1}] ${s.title}",
+                subtitle = "Paste clipboard into terminal",
                 iconRes = R.drawable.ic_paste,
                 action = {
                     binding.terminalView.pasteFromClipboard()
@@ -835,7 +821,7 @@ class TerminalActivity : AppCompatActivity() {
 
         ModernUiHelper.showModernContextMenu(
             context = this,
-            title = "Terminal Actions",
+            title = "Terminal",
             subtitle = "Session [${persistentActiveSessionIndex + 1}] ${s.title}",
             headerIconRes = R.drawable.ic_terminal,
             palette = palette,
@@ -850,7 +836,7 @@ class TerminalActivity : AppCompatActivity() {
             surfaceBg = Color.parseColor(style.bgHex),
             fgColor = Color.parseColor(style.keyFgHex),
             subtleColor = Color.parseColor("#9E9E9E"),
-            accentColor = Color.parseColor(style.accentHex),
+            accentColor = ModernUiHelper.PRIMARY_COLOR,
             borderColor = Color.parseColor("#33FFFFFF")
         )
     }
@@ -872,13 +858,13 @@ class TerminalActivity : AppCompatActivity() {
         when (action) {
             "reload-settings" -> {
                 reloadTermuxPropertiesAndStyle()
-                showTermuxToast("Termux settings reloaded")
+                showTermuxToast("Terminal settings reloaded")
             }
             "clipboard-set" -> {
                 val clipFile = File(AlpineLinuxEnvironment.usrTmpDir(this), ".termux_clipboard")
                 if (clipFile.exists()) {
                     val content = runCatching { clipFile.readText() }.getOrDefault("")
-                    binding.terminalView.copyToClipboard("termux-clipboard", content)
+                    binding.terminalView.copyToClipboard("terminal-clipboard", content)
                 }
             }
             "open-url" -> {
@@ -922,7 +908,7 @@ class TerminalActivity : AppCompatActivity() {
         binding.terminalSelectionStatus.setTextColor(keyFg)
         binding.btnTerminalSelectAll.setTextColor(accent)
         binding.btnTerminalCopySelection.backgroundTintList = ColorStateList.valueOf(accent)
-        binding.btnTerminalCopySelection.setTextColor(bg)
+        binding.btnTerminalCopySelection.setTextColor(Color.WHITE)
         binding.btnTerminalCancelSelection.imageTintList = ColorStateList.valueOf(keyFg)
 
         binding.btnToolbarDrawer.background = GradientDrawable().apply {
@@ -982,7 +968,7 @@ class TerminalActivity : AppCompatActivity() {
         var persistentActiveSessionIndex: Int = -1
 
         val TERMUX_STYLES = listOf(
-            TermuxStylePalette("Termux Default Black", "#000000", "#D0D0D0", "#141414", "#212121", "#FFFFFF", "#80DEEA"),
+            TermuxStylePalette("Default Black", "#000000", "#D0D0D0", "#141414", "#212121", "#FFFFFF", "#26A69A"),
             TermuxStylePalette("Dracula", "#282A36", "#F8F8F2", "#1E1F29", "#343746", "#F8F8F2", "#BD93F9"),
             TermuxStylePalette("Tokyo Night", "#1A1B26", "#C0CAF5", "#16161E", "#24283B", "#C0CAF5", "#7AA2F7"),
             TermuxStylePalette("Nord", "#2E3440", "#D8DEE9", "#242933", "#3B4252", "#ECEFF4", "#88C0D0"),

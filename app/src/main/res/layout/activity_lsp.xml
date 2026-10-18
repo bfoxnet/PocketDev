@@ -44,6 +44,7 @@
             android:layout_height="38dp"
             android:layout_weight="1"
             android:background="@android:color/transparent"
+            android:fontFamily="@font/plus_jakarta_sans"
             android:hint="@string/lsp_filter_hint"
             android:inputType="text"
             android:paddingHorizontal="8dp"
@@ -56,13 +57,14 @@
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:layout_marginStart="8dp"
+            android:fontFamily="@font/plus_jakarta_sans_semibold"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:text="@string/lsp_install_popular"
-            android:textSize="11sp" />
+            android:textSize="11.5sp" />
     </LinearLayout>
 
-    <!-- Category Filter Pills: [All] [Installed] [Popular] -->
+    <!-- Category Filter Pills: [All] [Installed] [Recommended] -->
     <LinearLayout
         android:id="@+id/lsp_filter_chips_row"
         android:layout_width="match_parent"
@@ -76,9 +78,10 @@
             android:id="@+id/chip_lsp_all"
             android:layout_width="wrap_content"
             android:layout_height="28dp"
+            android:fontFamily="@font/plus_jakarta_sans_semibold"
             android:gravity="center"
             android:paddingHorizontal="12dp"
-            android:text="All Servers"
+            android:text="All"
             android:textSize="11.5sp"
             android:textStyle="bold" />
 
@@ -87,6 +90,7 @@
             android:layout_width="wrap_content"
             android:layout_height="28dp"
             android:layout_marginStart="8dp"
+            android:fontFamily="@font/plus_jakarta_sans_medium"
             android:gravity="center"
             android:paddingHorizontal="12dp"
             android:text="Installed"
@@ -97,9 +101,10 @@
             android:layout_width="wrap_content"
             android:layout_height="28dp"
             android:layout_marginStart="8dp"
+            android:fontFamily="@font/plus_jakarta_sans_medium"
             android:gravity="center"
             android:paddingHorizontal="12dp"
-            android:text="Popular"
+            android:text="Recommended"
             android:textSize="11.5sp" />
     </LinearLayout>
 

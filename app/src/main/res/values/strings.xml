@@ -2,67 +2,69 @@
 <resources>
     <string name="app_name">PocketDev</string>
 
-    <!-- Toolbar & Options Menu -->
-    <string name="menu_run">Compile &amp; Run</string>
-    <string name="menu_run_config">Run configuration…</string>
-    <string name="menu_format_document">Format document</string>
-    <string name="menu_lsp_refactor">LSP: Hover / Definition / Rename…</string>
-    <string name="menu_github">Git &amp; GitHub integration…</string>
+    <!-- Toolbar & Three-Dot Overflow Menu (Concise, production-grade labels) -->
+    <string name="menu_run">Run</string>
+    <string name="menu_run_config">Run Config</string>
+    <string name="menu_format_document">Format</string>
+    <string name="menu_lsp_refactor">Code Actions</string>
+    <string name="menu_github">Git</string>
     <string name="menu_save">Save</string>
-    <string name="menu_open">Open file…</string>
-    <string name="menu_open_folder">Open project folder…</string>
-    <string name="menu_new">New file tab</string>
-    <string name="menu_file_tree">File tree</string>
-    <string name="menu_sync_project">Sync project</string>
-    <string name="menu_bottom_sheet">Bottom panel</string>
-    <string name="menu_search">Find in file</string>
-    <string name="menu_project_search">Find in project</string>
-    <string name="menu_lsp">Language servers (LSP)</string>
+    <string name="menu_open">Open File</string>
+    <string name="menu_open_folder">Open Project</string>
+    <string name="menu_new">New File</string>
+    <string name="menu_file_tree">Explorer</string>
+    <string name="menu_sync_project">Sync Project</string>
+    <string name="menu_bottom_sheet">Output Panel</string>
+    <string name="menu_search">Find</string>
+    <string name="menu_project_search">Find in Project</string>
+    <string name="menu_lsp">Language Servers</string>
     <string name="menu_terminal">Terminal</string>
     <string name="menu_undo">Undo</string>
     <string name="menu_redo">Redo</string>
-    <string name="menu_wrap">Word wrap</string>
-    <string name="menu_theme">Switch theme</string>
-    <string name="menu_diag">Editor Diagnostics</string>
-    <string name="menu_about">About PocketDev</string>
+    <string name="menu_wrap">Word Wrap</string>
+    <string name="menu_theme">Appearance</string>
+    <string name="menu_diag">Diagnostics</string>
+    <string name="menu_about">About</string>
 
     <!-- Bottom Sheet Sections -->
-    <string name="tab_code_analysis">Code Analysis</string>
-    <string name="tab_search_results">Search Results</string>
-    <string name="tab_build_output">Build Output</string>
+    <string name="tab_code_analysis">Problems</string>
+    <string name="tab_search_results">Search</string>
+    <string name="tab_build_output">Output</string>
 
-    <!-- Editor chrome -->
+    <!-- Editor Chrome -->
     <string name="line_col">Ln %1$d, Col %2$d</string>
     <string name="search_matches">%1$d of %2$d</string>
-    <string name="search_no_match">No matches</string>
-    <string name="search_hint">Find in file or project…</string>
-    <string name="replace_hint">Replace with…</string>
-    <string name="toggle_case_sensitive">Match case</string>
-    <string name="toggle_regex">Regex</string>
-    <string name="search_previous">Previous match</string>
-    <string name="search_next">Next match</string>
-    <string name="close_search">Close search</string>
-    <string name="symbol_row_desc">Symbol row</string>
+    <string name="search_no_match">No results</string>
+    <string name="search_hint">Find…</string>
+    <string name="replace_hint">Replace…</string>
+    <string name="toggle_case_sensitive">Match Case</string>
+    <string name="toggle_regex">Use Regular Expression</string>
+    <string name="search_previous">Previous Match</string>
+    <string name="search_next">Next Match</string>
+    <string name="close_search">Close</string>
+    <string name="symbol_row_desc">Symbol Bar</string>
     <string name="saved_toast">Saved</string>
-    <string name="open_failed">Couldn’t open this file</string>
+    <string name="open_failed">Unable to open file</string>
 
     <!-- Project Sidebar / File Tree -->
-    <string name="project_explorer_title">File Tree</string>
-    <string name="select_folder">Open Folder</string>
-    <string name="filter_files_hint">Filter files in project…</string>
+    <string name="project_explorer_title">Explorer</string>
+    <string name="select_folder">Open Project</string>
+    <string name="filter_files_hint">Filter files…</string>
 
     <!-- Language Server Protocol (LSP) Page -->
     <string name="lsp_title">Language Servers</string>
-    <string name="lsp_filter_hint">Filter by language or extension (e.g. kt, py, rust)…</string>
-    <string name="lsp_install_popular">Install Popular Set</string>
+    <string name="lsp_filter_hint">Filter by language or extension…</string>
+    <string name="lsp_install_popular">Install Recommended</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="pref_section_appearance">Appearance</string>
     <string name="pref_section_editor">Code Editor</string>
-    <string name="pref_section_tools">Environment &amp; Tools</string>
+    <string name="pref_section_terminal">Terminal</string>
+    <string name="pref_section_environment">Linux Environment</string>
+    <string name="pref_section_tools">Language Servers</string>
     <string name="pref_section_system">System &amp; About</string>
-    <string name="pref_theme">Color Scheme</string>
+    <string name="pref_theme">Color Theme</string>
     <string name="pref_font">Editor Font</string>
     <string name="pref_font_size">Font Size</string>
     <string name="pref_font_ligatures">Font Ligatures</string>
@@ -71,11 +73,11 @@
 
     <!-- Terminal -->
     <string name="terminal_title">Terminal</string>
-    <string name="terminal_cmd_hint">Enter Linux shell command…</string>
+    <string name="terminal_cmd_hint">Enter command…</string>
 
     <!-- About Page -->
     <string name="about_title">About PocketDev</string>
-    <string name="about_version_text">Version 2.1 • Real Stdio LSP, Build/Run, GitHub &amp; Zsh (robbyrussell)</string>
-    <string name="about_subtitle">Modern mobile IDE with Sora Editor syntax highlighting, real ProcessBuilder stdio LSP client, 1-tap Compile/Run into Build Output, GitHub OAuth/PAT integration, and an Ubuntu 24.04 Zsh (robbyrussell) terminal.</string>
-    <string name="about_features_body">• Real Stdio LSP Client &amp; Code Intelligence: ProcessBuilder-driven JSON-RPC 2.0 loop for installed language servers plus Hover documentation, Go-to-Definition, Find-References, Symbol Rename refactoring, and Diagnostics count badges.\n• Compile/Run &amp; Document Formatting: Run Go, Python, Node, TypeScript, Java, Kotlin, Rust, C/C++, PHP, Lua, and Shell scripts with streaming Build Output and per-language Run Configurations, plus clang-format/prettier/gofmt formatting.\n• Editor Productivity: Word-match highlighting under cursor, Code Folding ranges, and VS Code-style Sticky-Scroll top-level block headers.\n• GitHub Integration: OAuth Device Flow &amp; Personal Access Token login, private/public repository cloner, commit/push/pull dialogs, branch switcher, unified diff viewer, and M/A/U/D git-status badges in the File Tree.\n• Ubuntu 24.04 PRoot + Zsh (robbyrussell): Instant command execution, persistent warm PRoot shell, auto wake-lock management, toggle-sticky Ctrl key, notification shade download progress, and offline .tar.gz Environment Backup/Restore.</string>
+    <string name="about_version_text">Version 2.1.0</string>
+    <string name="about_subtitle">A fast, full-featured mobile code editor and Linux development environment for Android.</string>
+    <string name="about_features_body">• Code Intelligence: Built-in Language Server Protocol (LSP) support with hover documentation, go-to-definition, find references, symbol rename, and real-time diagnostics.\n• Build &amp; Run: Compile and execute Kotlin, Java, Python, Go, Rust, C/C++, TypeScript, Node.js, PHP, Ruby, Lua, and Shell scripts with interactive input.\n• Modern Code Editor: Syntax highlighting across 35+ languages, code folding, sticky scroll headers, and customizable color themes.\n• Git &amp; GitHub: Clone public and private repositories, stage changes, inspect diffs, switch branches, and push commits.\n• Linux Terminal: Integrated Ubuntu 24.04 LTS environment with Zsh, shell plugins, and offline backup and restore.</string>
 </resources>

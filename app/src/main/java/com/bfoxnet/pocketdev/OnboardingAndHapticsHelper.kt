@@ -3,7 +3,6 @@ package com.bfoxnet.pocketdev
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.VibrationEffect
@@ -19,12 +18,7 @@ import android.widget.TextView
 import kotlin.math.roundToInt
 
 /**
- * Interactive 3-Step First-Run Onboarding Wizard & Extra-Keys Haptic Feedback helper:
- * - Step 1: Pick Editor Color Scheme & Monospace Font (live preview).
- * - Step 2: 1-Tap Ubuntu 24.04.5 LTS + PRoot + Zsh (`robbyrussell` theme) setup status.
- * - Step 3: Stdio LSP Servers, 1-Tap Compile/Run with interactive `stdin`, and Git source control.
- * - Provides configurable haptic feedback (`Off`, `Light`, `Medium`, `Strong`) for extra keys
- *   and quick toolbar buttons.
+ * Interactive Welcome Guide & Haptic Feedback helper.
  */
 object OnboardingAndHapticsHelper {
 
@@ -83,7 +77,6 @@ object OnboardingAndHapticsHelper {
             rootContainer.removeAllViews()
             val palette = ModernUiHelper.resolvePalette(context)
 
-            // Step indicator dots + badge
             val topHeader = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -91,8 +84,7 @@ object OnboardingAndHapticsHelper {
             val badge = TextView(context).apply {
                 text = "WELCOME TO POCKETDEV • STEP ${currentStep + 1} OF 3"
                 textSize = 10.5f
-                typeface = Typeface.MONOSPACE
-                setTypeface(typeface, Typeface.BOLD)
+                typeface = ModernUiHelper.appFontBold(context)
                 setTextColor(palette.accentColor)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
@@ -122,17 +114,18 @@ object OnboardingAndHapticsHelper {
             when (currentStep) {
                 0 -> {
                     val title = TextView(context).apply {
-                        text = "1. Pick Your Editor Theme & Font"
+                        text = "Choose Your Theme & Editor Font"
                         textSize = 16.5f
-                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        typeface = ModernUiHelper.appFontBold(context)
                         setTextColor(palette.fgColor)
                         setPadding(0, dp(6), 0, dp(4))
                     }
                     rootContainer.addView(title)
 
                     val sub = TextView(context).apply {
-                        text = "Tap any theme or programming font below to apply it live across the code editor:"
+                        text = "Select a color scheme and monospace editor typeface:"
                         textSize = 12f
+                        typeface = ModernUiHelper.appFontRegular(context)
                         setTextColor(palette.subColor)
                         setPadding(0, 0, 0, dp(10))
                     }
@@ -147,7 +140,7 @@ object OnboardingAndHapticsHelper {
                         val chip = TextView(context).apply {
                             text = if (selected) "✓ ${tObj.label}" else tObj.label
                             textSize = 12f
-                            setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
+                            typeface = if (selected) ModernUiHelper.appFontBold(context) else ModernUiHelper.appFontMedium(context)
                             setTextColor(if (selected) palette.accentColor else palette.fgColor)
                             setPadding(dp(12), dp(8), dp(12), dp(8))
                             background = GradientDrawable().apply {
@@ -172,9 +165,9 @@ object OnboardingAndHapticsHelper {
                     rootContainer.addView(themeScroll)
 
                     val fontHdr = TextView(context).apply {
-                        text = "Programming Font (with OpenType Ligatures)"
+                        text = "Editor Font"
                         textSize = 11.5f
-                        typeface = Typeface.DEFAULT_BOLD
+                        typeface = ModernUiHelper.appFontBold(context)
                         setTextColor(palette.accentColor)
                         setPadding(0, dp(12), 0, dp(6))
                     }
@@ -187,7 +180,7 @@ object OnboardingAndHapticsHelper {
                         val chip = TextView(context).apply {
                             text = if (selected) "✓ ${fObj.label}" else fObj.label
                             textSize = 12f
-                            setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
+                            typeface = if (selected) ModernUiHelper.appFontBold(context) else ModernUiHelper.appFontMedium(context)
                             setTextColor(if (selected) palette.accentColor else palette.fgColor)
                             setPadding(dp(12), dp(8), dp(12), dp(8))
                             background = GradientDrawable().apply {
@@ -214,9 +207,9 @@ object OnboardingAndHapticsHelper {
 
                 1 -> {
                     val title = TextView(context).apply {
-                        text = "2. Ubuntu 24.04 LTS + Zsh (robbyrussell)"
+                        text = "Linux Development Environment"
                         textSize = 16.5f
-                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        typeface = ModernUiHelper.appFontBold(context)
                         setTextColor(palette.fgColor)
                         setPadding(0, dp(6), 0, dp(4))
                     }
@@ -234,14 +227,15 @@ object OnboardingAndHapticsHelper {
                         }
                     }
                     val statusLine = TextView(context).apply {
-                        text = if (isInstalled) "✓ Ubuntu 24.04.5 LTS Rootfs + PRoot Installed" else "⚡ Ready for 1-Tap Bootstrap (~28.5 MB)"
+                        text = if (isInstalled) "✓ Ubuntu 24.04 LTS Environment Ready" else "Ubuntu 24.04 LTS Ready for Setup"
                         textSize = 13f
-                        typeface = Typeface.DEFAULT_BOLD
+                        typeface = ModernUiHelper.appFontBold(context)
                         setTextColor(if (isInstalled) Color.parseColor("#66BB6A") else palette.accentColor)
                     }
                     val desc = TextView(context).apply {
-                        text = "PocketDev runs a real Ubuntu 24.04.5 LTS userland via native Android PRoot with Oh-My-Zsh (robbyrussell), syntax-highlighting, autosuggestions, and offline .tar.gz Backup/Restore."
+                        text = "PocketDev includes an integrated Ubuntu 24.04 LTS environment with Zsh, shell plugins, compilers, and offline backup and restore."
                         textSize = 12f
+                        typeface = ModernUiHelper.appFontRegular(context)
                         setTextColor(palette.subColor)
                         setPadding(0, dp(6), 0, 0)
                     }
@@ -252,9 +246,9 @@ object OnboardingAndHapticsHelper {
 
                 else -> {
                     val title = TextView(context).apply {
-                        text = "3. Stdio LSP, Build/Run & Git Sidebar"
+                        text = "Code Intelligence, Build & Git"
                         textSize = 16.5f
-                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        typeface = ModernUiHelper.appFontBold(context)
                         setTextColor(palette.fgColor)
                         setPadding(0, dp(6), 0, dp(4))
                     }
@@ -271,10 +265,11 @@ object OnboardingAndHapticsHelper {
                         }
                     }
                     val highlights = TextView(context).apply {
-                        text = "• Left Drawer Tabs: Switch seamlessly between File Tree, Git Source Control, and Document Symbols Outline.\n" +
-                            "• Draggable Bottom Panel: Inspect LSP diagnostics, project search hits, and streaming Build Output with interactive stdin.\n" +
-                            "• Real Stdio LSP: Install clangd, pyright, gopls, tsserver, or rust-analyzer from the LSP Manager."
+                        text = "• Project Explorer: Manage files, Git source control, and document symbols from the navigation drawer.\n" +
+                            "• Output Panel: Inspect diagnostics, search results, and build output with interactive standard input.\n" +
+                            "• Language Servers: Install clangd, pyright, gopls, typescript-language-server, or rust-analyzer."
                         textSize = 12f
+                        typeface = ModernUiHelper.appFontRegular(context)
                         setTextColor(palette.fgColor)
                         setLineSpacing(2.5f * density, 1.08f)
                     }
@@ -283,7 +278,6 @@ object OnboardingAndHapticsHelper {
                 }
             }
 
-            // Bottom Navigation Row
             val btnRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -293,6 +287,7 @@ object OnboardingAndHapticsHelper {
             val skipBtn = TextView(context).apply {
                 text = "Skip"
                 textSize = 12.5f
+                typeface = ModernUiHelper.appFontMedium(context)
                 setTextColor(palette.subColor)
                 setPadding(dp(10), dp(8), dp(10), dp(8))
                 setOnClickListener {
@@ -311,7 +306,7 @@ object OnboardingAndHapticsHelper {
                 val backBtn = TextView(context).apply {
                     text = "Back"
                     textSize = 12.5f
-                    typeface = Typeface.DEFAULT_BOLD
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.fgColor)
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
@@ -324,9 +319,9 @@ object OnboardingAndHapticsHelper {
 
             if (currentStep == 1 && !UbuntuProotManager.isUbuntuInstalled(context)) {
                 val bootBtn = TextView(context).apply {
-                    text = "Bootstrap Ubuntu"
+                    text = "Set Up Environment"
                     textSize = 12.5f
-                    typeface = Typeface.DEFAULT_BOLD
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.accentColor)
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
@@ -340,9 +335,9 @@ object OnboardingAndHapticsHelper {
 
             if (currentStep == 2) {
                 val lspBtn = TextView(context).apply {
-                    text = "LSP Servers"
+                    text = "Language Servers"
                     textSize = 12.5f
-                    typeface = Typeface.DEFAULT_BOLD
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.accentColor)
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
@@ -355,10 +350,10 @@ object OnboardingAndHapticsHelper {
             }
 
             val nextBtn = TextView(context).apply {
-                text = if (currentStep < 2) "Next →" else "Start Coding"
+                text = if (currentStep < 2) "Next" else "Get Started"
                 textSize = 12.5f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+                typeface = ModernUiHelper.appFontBold(context)
+                setTextColor(Color.WHITE)
                 setPadding(dp(16), dp(9), dp(16), dp(9))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE

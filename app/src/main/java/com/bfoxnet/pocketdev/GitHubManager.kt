@@ -36,24 +36,14 @@ import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
 
 /**
- * GitHub & Git Integration layered over the `git` CLI inside the Ubuntu 24.04 PRoot environment
- * (with HTTPS REST/Zipball fallback when `git` is not yet installed):
- * - **OAuth Device Flow + Personal Access Token (PAT) Login** for private and public repositories.
- * - **Clone Repository Bottom Sheet** (browse user's GitHub repos or paste any URL/owner/repo, injects
- *   token credentials seamlessly for private repos).
- * - **Interactive Commit, Push & Pull Bottom Sheet** (selective per-file staging checkboxes, inline file diff
- *   buttons, `git commit`, `git push`, `git pull --rebase`).
- * - **Branch Switcher & Creator** (`git branch`, `git checkout`, `git checkout -b`).
- * - **Colorized Unified Diff Viewer Bottom Sheet** (`git diff HEAD` with line numbers, `+additions / -deletions`
- *   counter badge, Copy Diff action, and clean single-frame Material 3 bottom sheet chrome).
- * - **Git-Status Badges in File Tree** (`M` Modified, `A` Added, `U` Untracked, `D` Deleted, `R` Renamed).
+ * Git & GitHub integration for PocketDev.
  */
 object GitHubManager {
 
     private const val DEFAULT_GITHUB_OAUTH_CLIENT_ID = "178c6fc778ccc68e1d6a"
 
     enum class GitFileState(val badge: String, val colorHex: String, val label: String) {
-        MODIFIED("M", "#FFB74D", "Modified"),
+        MODIFIED("M", "#26A69A", "Modified"),
         ADDED("A", "#81C784", "Added"),
         UNTRACKED("U", "#4FC3F7", "Untracked"),
         DELETED("D", "#E57373", "Deleted"),
@@ -194,20 +184,20 @@ object GitHubManager {
         val settings = Settings(context)
         val projectDir = ProjectManager.ensureDefaultLocalWorkspace(context)
         val hasRepo = isGitRepo(projectDir)
-        val branch = if (hasRepo) getCurrentBranchFast(projectDir) else "not a git repo"
+        val branch = if (hasRepo) getCurrentBranchFast(projectDir) else "uninitialized"
         val authStatus = if (settings.githubToken.isNotBlank()) {
             "Signed in as @${settings.githubUsername.ifBlank { "GitHub User" }}"
         } else {
-            "Not signed in (tap Account / Login to connect OAuth or PAT)"
+            "Connect your GitHub account"
         }
 
         val options = mutableListOf(
             ModernUiHelper.MenuOption(
                 id = 1,
-                title = if (settings.githubToken.isNotBlank()) "GitHub Account (@${settings.githubUsername.ifBlank { "connected" }})" else "Sign in to GitHub (OAuth Device Flow / PAT)",
+                title = if (settings.githubToken.isNotBlank()) "GitHub Account (@${settings.githubUsername.ifBlank { "connected" }})" else "Sign in to GitHub",
                 subtitle = authStatus,
                 iconRes = R.drawable.ic_git,
-                badgeText = if (settings.githubToken.isNotBlank()) "CONNECTED" else "LOGIN",
+                badgeText = if (settings.githubToken.isNotBlank()) "CONNECTED" else "SIGN IN",
                 action = {
                     showAuthDialog(context) {
                         showGitHubHubDialog(context, onProjectChanged, onTreeRefreshRequested)
@@ -216,8 +206,8 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 2,
-                title = "Clone Repository (Public or Private)",
-                subtitle = "Browse your GitHub repositories or clone by URL into PocketDev projects",
+                title = "Clone Repository",
+                subtitle = "Clone from URL or browse your GitHub repositories",
                 iconRes = R.drawable.ic_folder_open,
                 action = {
                     showCloneRepoDialog(context, onProjectChanged)
@@ -225,8 +215,8 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 3,
-                title = "Stage, Commit & Push Changes",
-                subtitle = if (hasRepo) "Select modified files, inspect diffs, commit, and push to origin/$branch" else "Initialize git repo or clone a project first",
+                title = "Commit & Push",
+                subtitle = if (hasRepo) "Stage changes, commit, and push to origin/$branch" else "Initialize repository first",
                 iconRes = R.drawable.ic_save,
                 badgeText = if (hasRepo) branch else null,
                 action = {
@@ -239,8 +229,8 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 4,
-                title = "Diff Viewer (Working Tree Changes)",
-                subtitle = "Inspect colorized unified git diff (+ additions / - deletions)",
+                title = "View Diff",
+                subtitle = "Inspect working tree changes",
                 iconRes = R.drawable.ic_code,
                 action = {
                     showDiffViewerDialog(context, projectDir, null)
@@ -248,8 +238,8 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 5,
-                title = "Branch Switcher & Creator",
-                subtitle = if (hasRepo) "Current branch: $branch • Switch or create a new branch" else "Requires an initialized Git repository",
+                title = "Branches",
+                subtitle = if (hasRepo) "Current branch: $branch" else "Requires an initialized Git repository",
                 iconRes = R.drawable.ic_git,
                 action = {
                     if (!hasRepo) {
@@ -261,14 +251,14 @@ object GitHubManager {
             ),
             ModernUiHelper.MenuOption(
                 id = 6,
-                title = "Pull Latest Changes (git pull)",
-                subtitle = "Fetch and merge/rebase latest commits from remote origin",
+                title = "Pull",
+                subtitle = "Fetch and rebase latest commits from remote",
                 iconRes = R.drawable.ic_refresh,
                 action = {
                     if (!hasRepo) {
-                        Toast.makeText(context, "Current project is not a Git repository yet.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Not a Git repository", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, "Pulling latest changes from origin...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Pulling latest changes…", Toast.LENGTH_SHORT).show()
                         Thread {
                             val res = runGitCommand(context, projectDir, "pull --rebase")
                             invalidateStatusCache()
@@ -276,7 +266,7 @@ object GitHubManager {
                                 onTreeRefreshRequested()
                                 ModernUiHelper.showModernConfirmDialog(
                                     context = context,
-                                    title = if (res.isSuccess) "Git Pull Complete ✓" else "Git Pull Output",
+                                    title = if (res.isSuccess) "Pull Complete" else "Pull Output",
                                     message = res.combinedOutput.ifBlank { "Already up to date." },
                                     confirmText = "OK",
                                     cancelText = "Close",
@@ -294,7 +284,7 @@ object GitHubManager {
             options.add(
                 ModernUiHelper.MenuOption(
                     id = 7,
-                    title = "Initialize Git Repository (git init)",
+                    title = "Initialize Repository",
                     subtitle = "Create a new Git repository in ${projectDir.name}",
                     iconRes = R.drawable.ic_new_file,
                     action = {
@@ -306,8 +296,8 @@ object GitHubManager {
 
         ModernUiHelper.showModernContextMenu(
             context = context,
-            title = "Git & GitHub Integration",
-            subtitle = "Project: ${projectDir.name} • Branch: $branch",
+            title = "Git",
+            subtitle = "${projectDir.name} • $branch",
             headerIconRes = R.drawable.ic_git,
             options = options
         )
@@ -329,8 +319,8 @@ object GitHubManager {
                 onTreeRefreshRequested()
                 Toast.makeText(
                     context,
-                    if (res.isSuccess) "Initialized Git repository in ${projectDir.name} ✓"
-                    else "git init failed (ensure git is installed in Ubuntu PRoot): ${res.stderr}",
+                    if (res.isSuccess) "Initialized repository in ${projectDir.name}"
+                    else "Failed to initialize repository: ${res.stderr}",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -349,31 +339,32 @@ object GitHubManager {
         }
 
         val title = TextView(context).apply {
-            text = "GitHub Authentication (OAuth / PAT)"
+            text = "GitHub Account"
             textSize = 16f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
         }
         root.addView(title)
 
         val statusText = TextView(context).apply {
             text = if (settings.githubToken.isNotBlank()) {
-                "✓ Connected as @${settings.githubUsername.ifBlank { "GitHub User" }}"
+                "Connected as @${settings.githubUsername.ifBlank { "GitHub User" }}"
             } else {
-                "Sign in via GitHub OAuth Device Flow (1-tap browser code) or paste a Personal Access Token (ghp_... / github_pat_...) with `repo` scope."
+                "Sign in with your browser or enter a Personal Access Token with repo access."
             }
             textSize = 12f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
             setPadding(0, dp(4), 0, dp(12))
         }
         root.addView(statusText)
 
         val deviceFlowBtn = TextView(context).apply {
-            text = "🔑 Start GitHub OAuth Device Flow (Browser Code)"
+            text = "Sign in with Browser"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(context)
             gravity = Gravity.CENTER
-            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            setTextColor(Color.WHITE)
             setPadding(dp(14), dp(11), dp(14), dp(11))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -385,16 +376,16 @@ object GitHubManager {
 
         val deviceCodeStatus = TextView(context).apply {
             textSize = 12f
-            typeface = Typeface.MONOSPACE
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.fgColor)
             setPadding(0, dp(8), 0, dp(8))
         }
         root.addView(deviceCodeStatus)
 
         val patLabel = TextView(context).apply {
-            text = "Or Personal Access Token (PAT)"
+            text = "Personal Access Token"
             textSize = 11.5f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.accentColor)
             setPadding(0, dp(6), 0, dp(4))
         }
@@ -419,8 +410,9 @@ object GitHubManager {
         root.addView(patInput)
 
         val clientIdLabel = TextView(context).apply {
-            text = "Custom GitHub OAuth Client ID (Optional)"
+            text = "OAuth Client ID (Optional)"
             textSize = 11f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
             setPadding(0, dp(8), 0, dp(4))
         }
@@ -451,14 +443,14 @@ object GitHubManager {
             val customClient = clientIdInput.text?.toString()?.trim().orEmpty()
             settings.githubOAuthClientId = customClient
             val clientId = customClient.ifEmpty { DEFAULT_GITHUB_OAUTH_CLIENT_ID }
-            deviceCodeStatus.text = "Requesting OAuth device code from github.com..."
+            deviceCodeStatus.text = "Requesting verification code…"
             startOAuthDeviceFlow(
                 context = context,
                 clientId = clientId,
                 onUserCodeReady = { userCode, verificationUri ->
                     val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                    cb?.setPrimaryClip(ClipData.newPlainText("GitHub Device Code", userCode))
-                    deviceCodeStatus.text = "Code copied to clipboard: $userCode\nOpen $verificationUri and paste $userCode.\nWaiting for authorization..."
+                    cb?.setPrimaryClip(ClipData.newPlainText("GitHub Code", userCode))
+                    deviceCodeStatus.text = "Code copied: $userCode\nOpen $verificationUri to authorize."
                     runCatching {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(verificationUri)))
                     }
@@ -466,12 +458,12 @@ object GitHubManager {
                 onSuccess = { token, username ->
                     settings.githubToken = token
                     settings.githubUsername = username
-                    Toast.makeText(context, "Signed in to GitHub as @$username ✓", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Signed in as @$username", Toast.LENGTH_LONG).show()
                     sheetDialog.dismiss()
                     onUpdated()
                 },
                 onError = { errMsg ->
-                    deviceCodeStatus.text = "OAuth Device Flow info: $errMsg"
+                    deviceCodeStatus.text = errMsg
                 }
             )
         }
@@ -486,6 +478,7 @@ object GitHubManager {
             val signOutBtn = TextView(context).apply {
                 text = "Sign Out"
                 textSize = 12.5f
+                typeface = ModernUiHelper.appFontSemiBold(context)
                 setTextColor(Color.parseColor("#E57373"))
                 setPadding(dp(12), dp(8), dp(12), dp(8))
                 setOnClickListener {
@@ -501,6 +494,7 @@ object GitHubManager {
         val cancelBtn = TextView(context).apply {
             text = "Cancel"
             textSize = 12.5f
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
             setOnClickListener { sheetDialog.dismiss() }
@@ -508,19 +502,19 @@ object GitHubManager {
         btnRow.addView(cancelBtn)
 
         val savePatBtn = TextView(context).apply {
-            text = "Verify & Save Token"
+            text = "Save Token"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.accentColor)
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener {
                 val tok = patInput.text?.toString()?.trim().orEmpty()
                 settings.githubOAuthClientId = clientIdInput.text?.toString()?.trim().orEmpty()
                 if (tok.isEmpty()) {
-                    Toast.makeText(context, "Enter a GitHub token or use OAuth Device Flow above", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Enter a token or sign in with browser", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                deviceCodeStatus.text = "Verifying token with api.github.com/user..."
+                deviceCodeStatus.text = "Verifying token…"
                 Thread {
                     val user = fetchGitHubUsername(tok)
                     mainHandler.post {
@@ -529,7 +523,7 @@ object GitHubManager {
                         configureGitCredentialsInRootfs(context, tok, settings.githubUsername)
                         Toast.makeText(
                             context,
-                            if (user != null) "Verified GitHub account @$user ✓" else "Saved GitHub token",
+                            if (user != null) "Connected as @$user" else "Token saved",
                             Toast.LENGTH_SHORT
                         ).show()
                         sheetDialog.dismiss()
@@ -571,7 +565,7 @@ object GitHubManager {
                 val expiresIn = json.optInt("expires_in", 600)
 
                 if (deviceCode.isEmpty() || userCode.isEmpty()) {
-                    mainHandler.post { onError(json.optString("error_description", "Could not start device flow")) }
+                    mainHandler.post { onError(json.optString("error_description", "Could not start sign-in")) }
                     return@Thread
                 }
 
@@ -609,7 +603,7 @@ object GitHubManager {
                     }
                 }
             } catch (e: Exception) {
-                mainHandler.post { onError(e.message ?: "Network error during OAuth Device Flow") }
+                mainHandler.post { onError(e.message ?: "Network error") }
             }
         }.apply { isDaemon = true }.start()
     }
@@ -669,23 +663,24 @@ object GitHubManager {
         }
 
         val title = TextView(context).apply {
-            text = "Clone GitHub Repository"
+            text = "Clone Repository"
             textSize = 16f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
         }
         root.addView(title)
 
         val sub = TextView(context).apply {
-            text = "Enter `owner/repo` or full HTTPS URL (private repos supported automatically when signed in):"
+            text = "Enter repository URL or owner/repo:"
             textSize = 11.5f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
             setPadding(0, dp(4), 0, dp(10))
         }
         root.addView(sub)
 
         val urlInput = EditText(context).apply {
-            hint = "e.g. octocat/Hello-World or https://github.com/user/repo.git"
+            hint = "owner/repo or https://github.com/user/repo.git"
             textSize = 13f
             typeface = Typeface.MONOSPACE
             setTextColor(palette.fgColor)
@@ -709,8 +704,9 @@ object GitHubManager {
 
         val statusView = TextView(context).apply {
             textSize = 11.5f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
-            text = if (settings.githubToken.isNotBlank()) "Loading your GitHub repositories..." else "Tip: Sign in to GitHub to list your private & public repositories here."
+            text = if (settings.githubToken.isNotBlank()) "Loading repositories…" else "Sign in to GitHub to browse your repositories."
             setPadding(0, dp(4), 0, dp(6))
         }
         repoListContainer.addView(statusView)
@@ -724,22 +720,23 @@ object GitHubManager {
                 mainHandler.post {
                     repoListContainer.removeAllViews()
                     if (repos.isEmpty()) {
-                        statusView.text = "No repositories returned from API — enter URL or owner/repo above."
+                        statusView.text = "Enter a repository URL or owner/repo above."
                         repoListContainer.addView(statusView)
                     } else {
                         val hdr = TextView(context).apply {
-                            text = "Your Recent Repositories (tap to select):"
+                            text = "Recent Repositories"
                             textSize = 11.5f
-                            typeface = Typeface.DEFAULT_BOLD
+                            typeface = ModernUiHelper.appFontBold(context)
                             setTextColor(palette.accentColor)
                             setPadding(0, 0, 0, dp(6))
                         }
                         repoListContainer.addView(hdr)
                         for (repo in repos.take(12)) {
                             val item = TextView(context).apply {
-                                val badge = if (repo.isPrivate) "🔒 PRIVATE" else "PUBLIC"
-                                text = "${repo.fullName}  [$badge]"
+                                val badge = if (repo.isPrivate) "Private" else "Public"
+                                text = "${repo.fullName} ($badge)"
                                 textSize = 12.5f
+                                typeface = ModernUiHelper.appFontMedium(context)
                                 setTextColor(palette.fgColor)
                                 setPadding(dp(10), dp(9), dp(10), dp(9))
                                 setOnClickListener {
@@ -762,6 +759,7 @@ object GitHubManager {
         val cancelBtn = TextView(context).apply {
             text = "Cancel"
             textSize = 12.5f
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
             setOnClickListener { sheetDialog.dismiss() }
@@ -769,10 +767,10 @@ object GitHubManager {
         btnRow.addView(cancelBtn)
 
         val cloneBtn = TextView(context).apply {
-            text = "Clone into Workspace"
+            text = "Clone"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            typeface = ModernUiHelper.appFontBold(context)
+            setTextColor(Color.WHITE)
             setPadding(dp(16), dp(9), dp(16), dp(9))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -785,7 +783,7 @@ object GitHubManager {
                     Toast.makeText(context, "Enter a repository URL or owner/repo", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                statusView.text = "Cloning $rawSpec..."
+                statusView.text = "Cloning $rawSpec…"
                 isEnabled = false
                 cloneRepositoryAsync(context, rawSpec) { clonedDir, message ->
                     isEnabled = true
@@ -794,7 +792,7 @@ object GitHubManager {
                         sheetDialog.dismiss()
                         onProjectCloned(clonedDir)
                     } else {
-                        statusView.text = "Clone error: $message"
+                        statusView.text = message
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     }
                 }
@@ -867,7 +865,7 @@ object GitHubManager {
                 val guestDest = UbuntuProotManager.hostDirToGuestPath(context, destDir)
                 val res = runGitCommand(context, projectsRoot, "clone ${shellSingleQuote(authedUrl)} ${shellSingleQuote(guestDest)}")
                 if (res.isSuccess && File(destDir, ".git").exists()) {
-                    mainHandler.post { onComplete(destDir, "Cloned $repoName via git CLI ✓") }
+                    mainHandler.post { onComplete(destDir, "Cloned $repoName") }
                     return@Thread
                 }
 
@@ -903,13 +901,13 @@ object GitHubManager {
                                 entry = zis.nextEntry
                             }
                         }
-                        mainHandler.post { onComplete(destDir, "Downloaded $slug into ${destDir.name} ✓") }
+                        mainHandler.post { onComplete(destDir, "Cloned ${destDir.name}") }
                         return@Thread
                     }
                 }
 
                 mainHandler.post {
-                    onComplete(null, res.combinedOutput.ifBlank { "Clone failed — verify URL or run `apt install git` in terminal." })
+                    onComplete(null, res.combinedOutput.ifBlank { "Clone failed — verify URL or install git." })
                 }
             } catch (e: Exception) {
                 mainHandler.post { onComplete(null, e.message ?: "Clone failed") }
@@ -917,9 +915,6 @@ object GitHubManager {
         }.apply { isDaemon = true }.start()
     }
 
-    /**
-     * Interactive Commit & Push Bottom Sheet with per-file staging checkboxes and 1-tap file diff links.
-     */
     fun showCommitAndPushDialog(
         context: Context,
         projectDir: File,
@@ -936,16 +931,17 @@ object GitHubManager {
 
         val branch = getCurrentBranchFast(projectDir)
         val title = TextView(context).apply {
-            text = "Stage, Commit & Push • $branch"
+            text = "Commit & Push • $branch"
             textSize = 16f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
         }
         root.addView(title)
 
         val statusSummary = TextView(context).apply {
-            text = "Inspecting modified files..."
+            text = "Checking modified files…"
             textSize = 11.5f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
             setPadding(0, dp(4), 0, dp(8))
         }
@@ -972,8 +968,9 @@ object GitHubManager {
         val stagedRelPaths = LinkedHashSet<String>()
 
         val msgInput = EditText(context).apply {
-            hint = "Commit message (e.g. feat: add LSP stdio & GitHub integration)"
+            hint = "Commit message…"
             textSize = 13f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.fgColor)
             setHintTextColor(palette.subColor)
             setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -991,15 +988,16 @@ object GitHubManager {
             mainHandler.post {
                 stageFilesContainer.removeAllViews()
                 if (statusMap.isEmpty()) {
-                    statusSummary.text = "✓ Working tree clean (no uncommitted changes)."
+                    statusSummary.text = "Working tree clean."
                     val emptyTv = TextView(context).apply {
-                        text = "No modified or untracked files to stage."
+                        text = "No modified or untracked files."
                         textSize = 12f
+                        typeface = ModernUiHelper.appFontRegular(context)
                         setTextColor(palette.subColor)
                     }
                     stageFilesContainer.addView(emptyTv)
                 } else {
-                    statusSummary.text = "Select files to stage (${statusMap.size} changed):"
+                    statusSummary.text = "Files to stage (${statusMap.size}):"
                     for ((relPath, state) in statusMap.entries.sortedBy { it.key }) {
                         stagedRelPaths.add(relPath)
                         val row = LinearLayout(context).apply {
@@ -1023,7 +1021,7 @@ object GitHubManager {
                         val diffLink = TextView(context).apply {
                             text = "Diff"
                             textSize = 11f
-                            typeface = Typeface.DEFAULT_BOLD
+                            typeface = ModernUiHelper.appFontBold(context)
                             setTextColor(palette.accentColor)
                             setPadding(dp(8), dp(4), dp(8), dp(4))
                             setOnClickListener {
@@ -1055,6 +1053,7 @@ object GitHubManager {
         val cancelBtn = TextView(context).apply {
             text = "Cancel"
             textSize = 12.5f
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.subColor)
             setPadding(dp(12), dp(8), dp(12), dp(8))
             setOnClickListener { sheetDialog.dismiss() }
@@ -1064,7 +1063,7 @@ object GitHubManager {
         val commitOnlyBtn = TextView(context).apply {
             text = "Commit"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener {
@@ -1079,7 +1078,7 @@ object GitHubManager {
                     invalidateStatusCache()
                     mainHandler.post {
                         onTreeRefreshRequested()
-                        Toast.makeText(context, res.combinedOutput.ifBlank { "Committed ✓" }, Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, res.combinedOutput.ifBlank { "Committed" }, Toast.LENGTH_LONG).show()
                         if (res.isSuccess) sheetDialog.dismiss()
                     }
                 }.start()
@@ -1090,8 +1089,8 @@ object GitHubManager {
         val commitPushBtn = TextView(context).apply {
             text = "Commit & Push"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            typeface = ModernUiHelper.appFontBold(context)
+            setTextColor(Color.WHITE)
             setPadding(dp(16), dp(9), dp(16), dp(9))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -1105,7 +1104,7 @@ object GitHubManager {
                     return@setOnClickListener
                 }
                 val stageCmd = buildStageShellFragment()
-                statusSummary.text = "Staging selected files, committing, and pushing to origin/$branch..."
+                statusSummary.text = "Pushing to origin/$branch…"
                 Thread {
                     val res = runGitCommand(
                         context,
@@ -1117,7 +1116,7 @@ object GitHubManager {
                         onTreeRefreshRequested()
                         Toast.makeText(
                             context,
-                            if (res.isSuccess) "Committed & pushed to origin/$branch ✓" else res.combinedOutput,
+                            if (res.isSuccess) "Pushed to origin/$branch" else res.combinedOutput,
                             Toast.LENGTH_LONG
                         ).show()
                         if (res.isSuccess) sheetDialog.dismiss() else statusSummary.text = res.combinedOutput
@@ -1151,7 +1150,7 @@ object GitHubManager {
                         ModernUiHelper.MenuOption(
                             id = idx + 1,
                             title = b,
-                            subtitle = if (isCurrent) "Active checked-out branch" else "Tap to checkout `$b`",
+                            subtitle = if (isCurrent) "Active branch" else "Switch to $b",
                             iconRes = R.drawable.ic_git,
                             badgeText = if (isCurrent) "ACTIVE" else null,
                             isSelected = isCurrent,
@@ -1164,7 +1163,7 @@ object GitHubManager {
                                         onTreeRefreshRequested()
                                         Toast.makeText(
                                             context,
-                                            if (co.isSuccess) "Switched to branch `$targetBranch` ✓" else co.combinedOutput,
+                                            if (co.isSuccess) "Switched to $targetBranch" else co.combinedOutput,
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -1176,16 +1175,16 @@ object GitHubManager {
                 options.add(
                     ModernUiHelper.MenuOption(
                         id = 999,
-                        title = "Create & Checkout New Branch...",
-                        subtitle = "Run `git checkout -b <branch_name>`",
+                        title = "New Branch",
+                        subtitle = "Create and switch to a new branch",
                         iconRes = R.drawable.ic_new_file,
                         action = {
                             ModernUiHelper.showModernInputDialog(
                                 context = context,
-                                title = "Create New Git Branch",
-                                subtitle = "Branch from `$currentBranch`:",
+                                title = "Create New Branch",
+                                subtitle = "Branch from $currentBranch:",
                                 hint = "feature/my-branch",
-                                confirmText = "Checkout -b"
+                                confirmText = "Create"
                             ) { newBranch ->
                                 val clean = newBranch.trim().replace(Regex("[^a-zA-Z0-9._/-]"), "-")
                                 if (clean.isNotEmpty()) {
@@ -1196,7 +1195,7 @@ object GitHubManager {
                                             onTreeRefreshRequested()
                                             Toast.makeText(
                                                 context,
-                                                if (co.isSuccess) "Created & switched to `$clean` ✓" else co.combinedOutput,
+                                                if (co.isSuccess) "Switched to $clean" else co.combinedOutput,
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -1209,8 +1208,8 @@ object GitHubManager {
 
                 ModernUiHelper.showModernContextMenu(
                     context = context,
-                    title = "Git Branches",
-                    subtitle = "Current branch: $currentBranch",
+                    title = "Branches",
+                    subtitle = "Current: $currentBranch",
                     headerIconRes = R.drawable.ic_git,
                     options = options
                 )
@@ -1218,10 +1217,6 @@ object GitHubManager {
         }.start()
     }
 
-    /**
-     * Clean, single-frame Material 3 Bottom Sheet Diff Viewer with line numbers,
-     * `+additions / -deletions` summary pill, and 1-tap Copy Diff button.
-     */
     fun showDiffViewerDialog(
         context: Context,
         projectDir: File,
@@ -1238,9 +1233,9 @@ object GitHubManager {
             } else {
                 val statusRes = runGitCommand(context, projectDir, "status -s$fileArg")
                 if (statusRes.stdout.isNotBlank()) {
-                    "No unstaged tracked diffs against HEAD, but status reports:\n\n${statusRes.stdout}"
+                    "Untracked or staged changes:\n\n${statusRes.stdout}"
                 } else {
-                    "Working tree matches HEAD (no uncommitted changes)."
+                    "No uncommitted changes."
                 }
             }
 
@@ -1261,7 +1256,6 @@ object GitHubManager {
                     setPadding(dp(18), dp(4), dp(18), dp(14))
                 }
 
-                // Header Row: Title + Additions/Deletions Badge
                 val headerRow = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -1269,9 +1263,9 @@ object GitHubManager {
                 }
 
                 val title = TextView(context).apply {
-                    text = if (targetFile != null) "Git Diff • ${targetFile.name}" else "Git Diff • ${projectDir.name}"
+                    text = if (targetFile != null) "Diff • ${targetFile.name}" else "Diff • ${projectDir.name}"
                     textSize = 15.5f
-                    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.fgColor)
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 }
@@ -1280,8 +1274,7 @@ object GitHubManager {
                 val statsBadge = TextView(context).apply {
                     text = "+$addedLines  -$deletedLines"
                     textSize = 11.5f
-                    typeface = Typeface.MONOSPACE
-                    setTypeface(typeface, Typeface.BOLD)
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.accentColor)
                     setPadding(dp(8), dp(3), dp(8), dp(3))
                     background = GradientDrawable().apply {
@@ -1301,7 +1294,7 @@ object GitHubManager {
                     colored.append(numPrefix).append(line).append("\n")
                     val end = colored.length
                     val color = when {
-                        line.startsWith("+++") || line.startsWith("---") -> Color.parseColor("#FFB74D")
+                        line.startsWith("+++") || line.startsWith("---") -> ModernUiHelper.PRIMARY_LIGHT_COLOR
                         line.startsWith("+") -> Color.parseColor("#81C784")
                         line.startsWith("-") -> Color.parseColor("#E57373")
                         line.startsWith("@@") -> Color.parseColor("#4FC3F7")
@@ -1345,15 +1338,15 @@ object GitHubManager {
                 }
 
                 val copyBtn = TextView(context).apply {
-                    text = "Copy Diff"
+                    text = "Copy"
                     textSize = 12.5f
-                    typeface = Typeface.DEFAULT_BOLD
+                    typeface = ModernUiHelper.appFontBold(context)
                     setTextColor(palette.accentColor)
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     setOnClickListener {
                         val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                         cb?.setPrimaryClip(ClipData.newPlainText("Git Diff", rawDiff))
-                        Toast.makeText(context, "Copied diff to clipboard ✓", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                     }
                 }
                 btnRow.addView(copyBtn)
@@ -1361,8 +1354,8 @@ object GitHubManager {
                 val closeBtn = TextView(context).apply {
                     text = "Close"
                     textSize = 12.5f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+                    typeface = ModernUiHelper.appFontBold(context)
+                    setTextColor(Color.WHITE)
                     setPadding(dp(16), dp(8), dp(16), dp(8))
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE

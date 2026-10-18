@@ -19,16 +19,7 @@ import java.io.InputStreamReader
 import kotlin.math.roundToInt
 
 /**
- * Compile/Run & Code-Formatting engine for PocketDev:
- * - Detects the language toolchain (`python3`, `node`, `go run`, `javac && java`, `kotlinc && java`,
- *   `cargo run`, `gcc`/`g++`, `php`, `ruby`, `bash`/`zsh`, `lua`, `rustc`) for the active file or project.
- * - Streams real-time stdout/stderr line-by-line into the **Build Output** tab via `ProcessBuilder`
- *   layered over the Ubuntu 24.04 PRoot environment (or host shell fallback).
- * - Supports interactive `stdin` forwarding ([sendStdinToCurrentBuild]) and instant process cancellation ([stopCurrentBuild]).
- * - Provides a per-language **Run Configuration Bottom Sheet** allowing custom command templates, CLI
- *   arguments, environment variables, and "Also run in interactive terminal" toggle.
- * - Provides **Format Document** (`clang-format`, `prettier`, `gofmt`, `black`/`autopep8`, `rustfmt`,
- *   `shfmt` inside PRoot, with an instant built-in structural indentation/brace formatter fallback).
+ * Compile/Run & Code-Formatting engine for PocketDev.
  */
 object BuildRunManager {
 
@@ -51,10 +42,6 @@ object BuildRunManager {
         activeProcess = null
     }
 
-    /**
-     * Sends a line of standard input (`stdin`) to the currently running build/run process.
-     * Returns true if a running process accepted the input.
-     */
     fun sendStdinToCurrentBuild(inputLine: String): Boolean {
         val proc = activeProcess ?: return false
         if (!proc.isAlive) return false
@@ -77,72 +64,72 @@ object BuildRunManager {
         return when (ext) {
             "py", "pyw" -> RunConfig(
                 languageKey = "python",
-                displayName = "Python 3 (python3)",
+                displayName = "Python 3",
                 commandTemplate = "python3 -u \$FILE \$ARGS"
             )
             "js", "mjs", "cjs" -> RunConfig(
                 languageKey = "javascript",
-                displayName = "Node.js (node)",
+                displayName = "Node.js",
                 commandTemplate = "node \$FILE \$ARGS"
             )
             "ts", "tsx" -> RunConfig(
                 languageKey = "typescript",
-                displayName = "TypeScript (tsx / ts-node / tsc)",
+                displayName = "TypeScript",
                 commandTemplate = "if command -v tsx >/dev/null 2>&1; then tsx \$FILE \$ARGS; elif command -v ts-node >/dev/null 2>&1; then ts-node \$FILE \$ARGS; else tsc \$FILE && node \$BASENAME.js \$ARGS; fi"
             )
             "go" -> RunConfig(
                 languageKey = "go",
-                displayName = "Go Toolchain (go run)",
+                displayName = "Go",
                 commandTemplate = "if [ -f go.mod ]; then go run . \$ARGS; else go run \$FILE \$ARGS; fi"
             )
             "java" -> RunConfig(
                 languageKey = "java",
-                displayName = "Java (javac + java)",
+                displayName = "Java",
                 commandTemplate = "javac \$FILE && java \$BASENAME \$ARGS"
             )
             "kt", "kts" -> RunConfig(
                 languageKey = "kotlin",
-                displayName = "Kotlin (kotlinc + java)",
+                displayName = "Kotlin",
                 commandTemplate = "if command -v kotlinc >/dev/null 2>&1; then kotlinc \$FILE -include-runtime -d \$BASENAME.jar && java -jar \$BASENAME.jar \$ARGS; else echo 'Install kotlinc or run via Gradle'; fi"
             )
             "rs" -> RunConfig(
                 languageKey = "rust",
-                displayName = "Rust (cargo run / rustc)",
+                displayName = "Rust",
                 commandTemplate = "if [ -f Cargo.toml ]; then cargo run -- \$ARGS; else rustc \$FILE -o /tmp/\$BASENAME && /tmp/\$BASENAME \$ARGS; fi"
             )
             "c" -> RunConfig(
                 languageKey = "c",
-                displayName = "C (clang / gcc)",
+                displayName = "C (Clang / GCC)",
                 commandTemplate = "if command -v clang >/dev/null 2>&1; then clang -O2 -Wall \$FILE -o /tmp/\$BASENAME && /tmp/\$BASENAME \$ARGS; else gcc -O2 -Wall \$FILE -o /tmp/\$BASENAME && /tmp/\$BASENAME \$ARGS; fi"
             )
             "cpp", "cc", "cxx", "hpp" -> RunConfig(
                 languageKey = "cpp",
-                displayName = "C++ (clang++ / g++)",
+                displayName = "C++ (Clang++ / G++)",
                 commandTemplate = "if command -v clang++ >/dev/null 2>&1; then clang++ -std=c++20 -O2 -Wall \$FILE -o /tmp/\$BASENAME && /tmp/\$BASENAME \$ARGS; else g++ -std=c++20 -O2 -Wall \$FILE -o /tmp/\$BASENAME && /tmp/\$BASENAME \$ARGS; fi"
             )
             "sh", "bash", "zsh" -> RunConfig(
                 languageKey = "shell",
-                displayName = "Shell Script (zsh / bash)",
+                displayName = "Shell Script",
                 commandTemplate = "sh \$FILE \$ARGS"
             )
             "php" -> RunConfig(
                 languageKey = "php",
-                displayName = "PHP CLI (php)",
+                displayName = "PHP",
                 commandTemplate = "php \$FILE \$ARGS"
             )
             "rb" -> RunConfig(
                 languageKey = "ruby",
-                displayName = "Ruby (ruby)",
+                displayName = "Ruby",
                 commandTemplate = "ruby \$FILE \$ARGS"
             )
             "lua" -> RunConfig(
                 languageKey = "lua",
-                displayName = "Lua (lua)",
+                displayName = "Lua",
                 commandTemplate = "lua \$FILE \$ARGS"
             )
             else -> RunConfig(
                 languageKey = "generic",
-                displayName = "Custom Project Command",
+                displayName = "Custom Command",
                 commandTemplate = "ls -la && echo 'Running '\"\${FILE}\""
             )
         }
@@ -243,7 +230,7 @@ object BuildRunManager {
                         UbuntuProotManager.applyHostProotEnv(context, environment())
                     }
                 } else {
-                    onOutputLine("ℹ Ubuntu 24.04 PRoot is not bootstrapped yet — running with Android host shell.")
+                    onOutputLine("ℹ Linux environment not initialized — running with device shell.")
                     ProcessBuilder("/system/bin/sh", "-c", "cd ${shellSingleQuote(workDir.absolutePath)} && ${config.commandTemplate.replace("\$FILE", shellSingleQuote(file.name)).replace("\$BASENAME", file.nameWithoutExtension).replace("\$ARGS", config.programArgs)}")
                         .directory(workDir)
                         .redirectErrorStream(true)
@@ -264,7 +251,7 @@ object BuildRunManager {
                 }
                 exitCode = proc.waitFor()
             } catch (e: Exception) {
-                val msg = "Build/Run execution error: ${e.message}"
+                val msg = "Execution error: ${e.message}"
                 onOutputLine("✗ $msg")
                 DiagLogger.log("Build", msg, context, e)
             } finally {
@@ -296,14 +283,15 @@ object BuildRunManager {
         val titleView = TextView(context).apply {
             text = "Run Configuration • ${current.displayName}"
             textSize = 16f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
         }
         root.addView(titleView)
 
         val subView = TextView(context).apply {
-            text = "Placeholders: \$FILE (active file), \$BASENAME (no ext), \$DIR (project dir), \$ARGS (CLI args)"
+            text = "Variables: \$FILE, \$BASENAME, \$DIR, \$ARGS"
             textSize = 11.5f
+            typeface = ModernUiHelper.appFontRegular(context)
             setTextColor(palette.subColor)
             setPadding(0, dp(4), 0, dp(10))
         }
@@ -313,7 +301,7 @@ object BuildRunManager {
             val lbl = TextView(context).apply {
                 text = label
                 textSize = 11.5f
-                typeface = Typeface.DEFAULT_BOLD
+                typeface = ModernUiHelper.appFontBold(context)
                 setTextColor(palette.accentColor)
                 setPadding(0, dp(6), 0, dp(4))
             }
@@ -339,24 +327,25 @@ object BuildRunManager {
         }
 
         val cmdInput = styledField(
-            label = "Command Template (Ubuntu 24.04 PRoot)",
+            label = "Command",
             initialValue = current.commandTemplate,
             hintText = defaultRunConfigForFile(fileName).commandTemplate
         )
         val argsInput = styledField(
-            label = "Program Arguments (\$ARGS)",
+            label = "Arguments (\$ARGS)",
             initialValue = current.programArgs,
-            hintText = "e.g. --port 8080 input.txt"
+            hintText = "--port 8080 input.txt"
         )
         val envInput = styledField(
-            label = "Environment Variables (KEY=VALUE)",
+            label = "Environment Variables",
             initialValue = current.envVars,
-            hintText = "e.g. RUST_BACKTRACE=1 PYTHONUNBUFFERED=1"
+            hintText = "RUST_BACKTRACE=1 PYTHONUNBUFFERED=1"
         )
 
         val terminalCheck = CheckBox(context).apply {
-            text = "Launch inside interactive full-screen Terminal instead of Build Output tab"
+            text = "Run in interactive terminal"
             textSize = 12.5f
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.fgColor)
             buttonTintList = ColorStateList.valueOf(palette.accentColor)
             isChecked = current.runInTerminal
@@ -374,8 +363,9 @@ object BuildRunManager {
         val sheetDialog = ModernUiHelper.showModernCustomBottomSheet(context, scroll, palette)
 
         val resetBtn = TextView(context).apply {
-            text = "Reset Default"
+            text = "Reset"
             textSize = 12.5f
+            typeface = ModernUiHelper.appFontMedium(context)
             setTextColor(palette.subColor)
             setPadding(dp(10), dp(8), dp(12), dp(8))
             setOnClickListener {
@@ -384,7 +374,7 @@ object BuildRunManager {
                 argsInput.setText(def.programArgs)
                 envInput.setText(def.envVars)
                 terminalCheck.isChecked = def.runInTerminal
-                Toast.makeText(context, "Reset to default ${def.displayName} template", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Reset to default", Toast.LENGTH_SHORT).show()
             }
         }
         btnRow.addView(resetBtn)
@@ -392,7 +382,7 @@ object BuildRunManager {
         val saveOnlyBtn = TextView(context).apply {
             text = "Save"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
+            typeface = ModernUiHelper.appFontBold(context)
             setTextColor(palette.fgColor)
             setPadding(dp(14), dp(8), dp(14), dp(8))
             setOnClickListener {
@@ -404,16 +394,16 @@ object BuildRunManager {
                 )
                 saveRunConfig(context, updated)
                 sheetDialog.dismiss()
-                Toast.makeText(context, "Saved Run Configuration for ${updated.displayName}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Saved configuration", Toast.LENGTH_SHORT).show()
             }
         }
         btnRow.addView(saveOnlyBtn)
 
         val runBtn = TextView(context).apply {
-            text = "▶ Save & Run"
+            text = "Save & Run"
             textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (palette.isDark) Color.parseColor("#1E1200") else Color.WHITE)
+            typeface = ModernUiHelper.appFontBold(context)
+            setTextColor(Color.WHITE)
             setPadding(dp(16), dp(9), dp(16), dp(9))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -446,7 +436,7 @@ object BuildRunManager {
         val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         Thread {
             var formatted: String? = null
-            var label = "Built-in Structural Formatter"
+            var label = "Built-in Formatter"
 
             if (UbuntuProotManager.isUbuntuInstalled(context) && localFile != null && localFile.exists()) {
                 val ext = fileName.substringAfterLast('.', "").lowercase()
@@ -491,12 +481,12 @@ object BuildRunManager {
                         if (code == 0 && stdout.isNotBlank()) {
                             formatted = stdout
                             label = when (ext) {
-                                "go" -> "gofmt (PRoot)"
-                                "c", "cpp", "cc", "cxx", "h", "hpp", "java" -> "clang-format (PRoot)"
-                                "py", "pyw" -> "black / autopep8 (PRoot)"
-                                "rs" -> "rustfmt (PRoot)"
-                                "sh", "bash", "zsh" -> "shfmt (PRoot)"
-                                else -> "prettier (PRoot)"
+                                "go" -> "gofmt"
+                                "c", "cpp", "cc", "cxx", "h", "hpp", "java" -> "clang-format"
+                                "py", "pyw" -> "black"
+                                "rs" -> "rustfmt"
+                                "sh", "bash", "zsh" -> "shfmt"
+                                else -> "prettier"
                             }
                         }
                     }

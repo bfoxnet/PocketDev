@@ -17,6 +17,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PocketDev">
 
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -63,7 +67,7 @@
         <receiver
             android:name=".ContinueCodingWidgetProvider"
             android:exported="true"
-            android:label="PocketDev • Continue Coding">
+            android:label="Continue Coding">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
