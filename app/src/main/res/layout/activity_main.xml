@@ -291,6 +291,12 @@
                 android:layout_height="match_parent"
                 android:background="@color/editor_surface" />
 
+            <!-- Interactive Gutter Fold / Unfold Chevron Icons (▾ / ▸) -->
+            <com.bfoxnet.pocketdev.EditorFoldGutterOverlayView
+                android:id="@+id/editor_fold_gutter"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
             <!-- Empty State when all editor tabs are closed -->
             <LinearLayout
                 android:id="@+id/editor_empty_state"

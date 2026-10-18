@@ -115,6 +115,20 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
             target.javaClass.getMethod("setDividerWidth", Float::class.javaPrimitiveType)
                 .invoke(target, 0f)
         }
+        val density = context.resources.displayMetrics.density
+        val foldLanePx = if (settings.codeFoldingEnabled) 18f * density else 6f * density
+        runCatching {
+            target.javaClass.getMethod(
+                "setDividerMargin",
+                Float::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType
+            ).invoke(target, foldLanePx, 4f * density)
+        }.onFailure {
+            runCatching {
+                target.javaClass.getMethod("setDividerMargin", Float::class.javaPrimitiveType)
+                    .invoke(target, foldLanePx)
+            }
+        }
         runCatching {
             target.javaClass.getMethod("setBlockLineEnabled", Boolean::class.javaPrimitiveType)
                 .invoke(target, settings.codeFoldingEnabled)
@@ -158,6 +172,10 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
     /** Returns the active Editor Theme foreground color (for the CodeEditor canvas only). */
     fun currentEditorForegroundColor(): Int =
         Color.parseColor(themeById(settings.editorTheme).ui.fg)
+
+    /** Returns the active Editor Theme line-number color (for gutter fold/unfold icons). */
+    fun currentEditorLineNumberColor(): Int =
+        Color.parseColor(themeById(settings.editorTheme).ui.lineNumActive)
 
     /** App UI surface color (decoupled from Editor Theme). */
     fun currentSurfaceColor(): Int = ModernUiHelper.UI_SURFACE_COLOR
@@ -846,12 +864,19 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
     }
 
     /**
-     * Toggles code folding for the block enclosing the current cursor line (or unfolds if the
-     * cursor line already contains a folded block marker).
+     * Toggles code folding for the block enclosing the current cursor line.
      */
-    fun toggleFoldBlockAtCursor(): String {
+    fun toggleFoldBlockAtCursor(): String =
+        toggleFoldBlockAtLine(editor.cursor.leftLine)
+
+    /**
+     * Toggles code folding for the block starting at or enclosing [targetLine0] (or unfolds if
+     * [targetLine0] already contains a folded block marker). Invoked directly when tapping the
+     * in-editor gutter fold/unfold chevron icon (`▾` / `▸`).
+     */
+    fun toggleFoldBlockAtLine(targetLine0: Int): String {
         val textObj = editor.text
-        val curLine = editor.cursor.leftLine
+        val curLine = targetLine0.coerceIn(0, (textObj.lineCount - 1).coerceAtLeast(0))
         val curLineStr = textObj.getLineString(curLine)
 
         // Check if current line has a folded marker `/* ⋯ folded #F1 (12 lines) ⋯ */`
@@ -1366,7 +1391,17 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
             val whitespace = Color.parseColor(ui.whitespace)
             val widgetBg = Color.parseColor(ui.widgetBg)
             val bracketMatch = Color.parseColor(ui.bracketMatch)
-            val findMatch = Color.parseColor(ui.findMatch)
+            // Transparent frosted-glass highlight for multi-keyword / word-match occurrences
+            val glassHighlightBg = if (theme.dark) {
+                Color.parseColor("#2CDCE6F5")
+            } else {
+                Color.parseColor("#24475569")
+            }
+            val glassHighlightBorder = if (theme.dark) {
+                Color.parseColor("#52FFFFFF")
+            } else {
+                Color.parseColor("#4864748B")
+            }
 
             s.setColor(EditorColorScheme.WHOLE_BACKGROUND, bg)
             s.setColor(EditorColorScheme.LINE_NUMBER_BACKGROUND, bg)
@@ -1384,7 +1419,25 @@ class EditorController(private val context: Context, val editor: CodeEditor) {
             s.setColor(EditorColorScheme.SIDE_BLOCK_LINE, Color.TRANSPARENT)
             s.setColor(EditorColorScheme.LINE_DIVIDER, Color.TRANSPARENT)
             s.setColor(EditorColorScheme.NON_PRINTABLE_CHAR, whitespace)
-            s.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, findMatch)
+            s.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, glassHighlightBg)
+            // Override all sora-editor search/word-match highlight constants (including CURRENT_SEARCH_MATCH_BACKGROUND
+            // which defaults to bright yellow in EditorColorScheme) with transparent glass colors
+            runCatching {
+                for (field in EditorColorScheme::class.java.declaredFields) {
+                    if (java.lang.reflect.Modifier.isStatic(field.modifiers) && field.type == Int::class.javaPrimitiveType) {
+                        val name = field.name
+                        if (name.contains("MATCH") || name.contains("SEARCH")) {
+                            field.isAccessible = true
+                            val colorId = field.getInt(null)
+                            if (name.contains("BORDER")) {
+                                s.setColor(colorId, glassHighlightBorder)
+                            } else {
+                                s.setColor(colorId, glassHighlightBg)
+                            }
+                        }
+                    }
+                }
+            }
             s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_FOREGROUND, bracketMatch)
             s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_BACKGROUND, lineHighlight)
             s.setColor(EditorColorScheme.HIGHLIGHTED_DELIMITERS_UNDERLINE, Color.TRANSPARENT)

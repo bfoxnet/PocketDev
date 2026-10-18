@@ -41,18 +41,6 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/action_prettier"
-        android:title="@string/menu_prettier"
-        android:icon="@drawable/ic_format_align"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_plugins"
-        android:title="@string/menu_plugins"
-        android:icon="@drawable/ic_code"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/action_lsp_refactor"
         android:title="@string/menu_lsp_refactor"
         android:icon="@drawable/ic_lsp"

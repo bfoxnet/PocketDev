@@ -52,7 +52,7 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_WORD_MATCH_HIGHLIGHT, true)
         set(value) = prefs.edit().putBoolean(KEY_WORD_MATCH_HIGHLIGHT, value).apply()
 
-    /** Enable code folding ranges & block lines in the editor. Enabled by default. */
+    /** Enable interactive gutter code folding icons (`▾` / `▸`) in the editor. Enabled by default. */
     var codeFoldingEnabled: Boolean
         get() = prefs.getBoolean(KEY_CODE_FOLDING, true)
         set(value) = prefs.edit().putBoolean(KEY_CODE_FOLDING, value).apply()
@@ -170,128 +170,103 @@ class Settings(context: Context) {
 
     // ---------------------------------------------------------------- Workspace & Terminal State
 
-    /** Persistent SAF DocumentTree URI string (legacy import fallback). */
     var projectTreeUri: String?
         get() = prefs.getString(KEY_PROJECT_TREE_URI, null)
         set(value) = prefs.edit().putString(KEY_PROJECT_TREE_URI, value).apply()
 
-    /** Active project root mode: always defaults to "local" (Ubuntu rootfs projects dir). */
     var projectMode: String
         get() = prefs.getString(KEY_PROJECT_MODE, "local") ?: "local"
         set(value) = prefs.edit().putString(KEY_PROJECT_MODE, value).apply()
 
-    /** Active project directory path inside the Ubuntu directory (`$filesDir/ubuntu/root/projects/<name>`). */
     var localProjectPath: String?
         get() = prefs.getString(KEY_LOCAL_PROJECT_PATH, null)
         set(value) = prefs.edit().putString(KEY_LOCAL_PROJECT_PATH, value).apply()
 
-    /** Last opened file path for the "Continue coding" home-screen widget. */
     var lastOpenedFilePath: String?
         get() = prefs.getString(KEY_LAST_OPENED_FILE_PATH, null)
         set(value) = prefs.edit().putString(KEY_LAST_OPENED_FILE_PATH, value).apply()
 
-    /** Last opened file display name for the "Continue coding" home-screen widget. */
     var lastOpenedFileName: String?
         get() = prefs.getString(KEY_LAST_OPENED_FILE_NAME, "Main.kt")
         set(value) = prefs.edit().putString(KEY_LAST_OPENED_FILE_NAME, value).apply()
 
-    /** Last opened project path for the "Continue coding" home-screen widget. */
     var lastWidgetProjectPath: String?
         get() = prefs.getString(KEY_LAST_WIDGET_PROJECT_PATH, null)
         set(value) = prefs.edit().putString(KEY_LAST_WIDGET_PROJECT_PATH, value).apply()
 
-    /** GitHub OAuth/PAT token for push/pull in the Ubuntu PRoot terminal. */
     var githubToken: String
         get() = prefs.getString(KEY_GITHUB_TOKEN, "") ?: ""
         set(value) = prefs.edit().putString(KEY_GITHUB_TOKEN, value).apply()
 
-    /** GitHub username for the authenticated account. */
     var githubUsername: String
         get() = prefs.getString(KEY_GITHUB_USERNAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_GITHUB_USERNAME, value).apply()
 
-    /** Optional GitHub OAuth App Client ID used for the Device Flow sign-in. */
     var githubOAuthClientId: String
         get() = prefs.getString(KEY_GITHUB_OAUTH_CLIENT_ID, "") ?: ""
         set(value) = prefs.edit().putString(KEY_GITHUB_OAUTH_CLIENT_ID, value).apply()
 
-    /** Whether DiagLogger may post "task finished" notifications while downloads/builds run. */
     var downloadNotificationsEnabled: Boolean
         get() = prefs.getBoolean(KEY_DOWNLOAD_NOTIFICATIONS_ENABLED, true)
         set(value) = prefs.edit().putBoolean(KEY_DOWNLOAD_NOTIFICATIONS_ENABLED, value).apply()
 
-    /** Last opened file display name for the "Continue coding" home-screen widget. */
     var lastWidgetFileName: String?
         get() = prefs.getString(KEY_LAST_WIDGET_FILE_NAME, "")
         set(value) = prefs.edit().putString(KEY_LAST_WIDGET_FILE_NAME, value).apply()
 
-    /** Last opened file absolute path for the "Continue coding" home-screen widget. */
     var lastWidgetFilePath: String?
         get() = prefs.getString(KEY_LAST_WIDGET_FILE_PATH, "")
         set(value) = prefs.edit().putString(KEY_LAST_WIDGET_FILE_PATH, value).apply()
 
-    /** True once the user has completed or dismissed the first-run onboarding guide. */
     var onboardingCompleted: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
         set(value) = prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, value).apply()
 
-    /** Persisted Termux color style palette index (`0..7`). */
     var terminalStyleIndex: Int
         get() = prefs.getInt(KEY_TERMINAL_STYLE_INDEX, 0)
         set(value) = prefs.edit().putInt(KEY_TERMINAL_STYLE_INDEX, value).apply()
 
-    /** Persisted Termux cursor style (`0 = block`, `1 = underline`, `2 = bar`). */
     var terminalCursorStyle: Int
         get() = prefs.getInt(KEY_TERMINAL_CURSOR_STYLE, -1)
         set(value) = prefs.edit().putInt(KEY_TERMINAL_CURSOR_STYLE, value).apply()
 
-    /** Persisted Termux helper Extra Keys toolbar visibility. */
     var terminalToolbarVisible: Boolean
         get() = prefs.getBoolean(KEY_TERMINAL_TOOLBAR_VISIBLE, true)
         set(value) = prefs.edit().putBoolean(KEY_TERMINAL_TOOLBAR_VISIBLE, value).apply()
 
-    /** Persisted Termux Keep Screen On toggle. */
     var terminalKeepScreenOn: Boolean
         get() = prefs.getBoolean(KEY_TERMINAL_KEEP_SCREEN_ON, false)
         set(value) = prefs.edit().putBoolean(KEY_TERMINAL_KEEP_SCREEN_ON, value).apply()
 
-    /** Auto keep-screen-on & CPU wake-lock while a terminal command is actively running. Enabled by default. */
     var terminalAutoWakeLock: Boolean
         get() = prefs.getBoolean(KEY_TERMINAL_AUTO_WAKELOCK, true)
         set(value) = prefs.edit().putBoolean(KEY_TERMINAL_AUTO_WAKELOCK, value).apply()
 
-    /** Toggle-sticky Ctrl key mode (stays latched across keys until toggled off, rather than hold-only). */
     var terminalStickyCtrl: Boolean
         get() = prefs.getBoolean(KEY_TERMINAL_STICKY_CTRL, true)
         set(value) = prefs.edit().putBoolean(KEY_TERMINAL_STICKY_CTRL, value).apply()
 
-    /** Extra keys haptic feedback intensity: 0 = Off, 1 = Light, 2 = Medium, 3 = Strong. */
     var hapticFeedbackLevel: Int
         get() = prefs.getInt(KEY_HAPTIC_FEEDBACK_LEVEL, 1)
         set(value) = prefs.edit().putInt(KEY_HAPTIC_FEEDBACK_LEVEL, value.coerceIn(0, 3)).apply()
 
-    /** Persisted terminal font size in sp. */
     var terminalFontSizeSp: Float
         get() = prefs.getFloat(KEY_TERMINAL_FONT_SIZE_SP, 13.5f)
         set(value) = prefs.edit().putFloat(KEY_TERMINAL_FONT_SIZE_SP, value).apply()
 
-    /** Default interactive shell inside Ubuntu PRoot ("zsh" with robbyrussell theme + plugins, or "bash"). */
     var defaultShell: String
         get() = prefs.getString(KEY_DEFAULT_SHELL, SHELL_ZSH) ?: SHELL_ZSH
         set(value) = prefs.edit().putString(KEY_DEFAULT_SHELL, value).apply()
 
-    /** Default Zsh theme inside Ubuntu PRoot (defaults to Oh My Zsh's "robbyrussell"). */
     var zshTheme: String
         get() = prefs.getString(KEY_ZSH_THEME, DEFAULT_ZSH_THEME) ?: DEFAULT_ZSH_THEME
         set(value) = prefs.edit().putString(KEY_ZSH_THEME, value).apply()
 
-    /** Detected host hardware ABI for Ubuntu PRoot ("aarch64", "x86_64", "arm"). */
     var vmArch: String
         get() = prefs.getString(KEY_VM_ARCH, UbuntuProotManager.detectHostAbi())
             ?: UbuntuProotManager.detectHostAbi()
         set(value) = prefs.edit().putString(KEY_VM_ARCH, value).apply()
 
-    /** Returns true if the user has installed the given Language Server Protocol [serverId]. */
     fun isLspInstalled(serverId: String): Boolean =
         prefs.getBoolean("$KEY_LSP_INSTALLED_PREFIX$serverId", false)
 
@@ -299,7 +274,6 @@ class Settings(context: Context) {
         prefs.edit().putBoolean("$KEY_LSP_INSTALLED_PREFIX$serverId", installed).apply()
     }
 
-    /** Returns true if the installed Language Server Protocol [serverId] is enabled for the editor. */
     fun isLspEnabled(serverId: String): Boolean =
         prefs.getBoolean("$KEY_LSP_ENABLED_PREFIX$serverId", true)
 
@@ -307,7 +281,6 @@ class Settings(context: Context) {
         prefs.edit().putBoolean("$KEY_LSP_ENABLED_PREFIX$serverId", enabled).apply()
     }
 
-    /** Returns true if the given IDE plugin [pluginId] is enabled. */
     fun isPluginEnabled(pluginId: String, defaultEnabled: Boolean = true): Boolean =
         prefs.getBoolean("$KEY_PLUGIN_ENABLED_PREFIX$pluginId", defaultEnabled)
 
@@ -395,7 +368,11 @@ class Settings(context: Context) {
             Font("roboto_mono", R.font.roboto_mono, "Roboto Mono"),
         )
 
-        /** Multiple UI Font System families (4 weights each). */
+        /**
+         * Embedded UI Font System families (4 weights each).
+         * Bundled as both raw assets (`assets/fonts/...`) and `res/font/...` binaries so
+         * `Typeface.createFromAsset` bypasses OEM/Android system font overrides 100% of the time.
+         */
         val UI_FONTS = listOf(
             UiFont(
                 id = "plus_jakarta_sans",
@@ -403,7 +380,8 @@ class Settings(context: Context) {
                 regularRes = R.font.plus_jakarta_sans,
                 mediumRes = R.font.plus_jakarta_sans_medium,
                 semiBoldRes = R.font.plus_jakarta_sans_semibold,
-                boldRes = R.font.plus_jakarta_sans_bold
+                boldRes = R.font.plus_jakarta_sans_bold,
+                ext = "otf"
             ),
             UiFont(
                 id = "google_sans",
@@ -411,7 +389,8 @@ class Settings(context: Context) {
                 regularRes = R.font.google_sans,
                 mediumRes = R.font.google_sans_medium,
                 semiBoldRes = R.font.google_sans_semibold,
-                boldRes = R.font.google_sans_bold
+                boldRes = R.font.google_sans_bold,
+                ext = "otf"
             ),
             UiFont(
                 id = "inter",
@@ -419,7 +398,8 @@ class Settings(context: Context) {
                 regularRes = R.font.inter,
                 mediumRes = R.font.inter_medium,
                 semiBoldRes = R.font.inter_semibold,
-                boldRes = R.font.inter_bold
+                boldRes = R.font.inter_bold,
+                ext = "otf"
             ),
             UiFont(
                 id = "geist",
@@ -427,7 +407,8 @@ class Settings(context: Context) {
                 regularRes = R.font.geist,
                 mediumRes = R.font.geist_medium,
                 semiBoldRes = R.font.geist_semibold,
-                boldRes = R.font.geist_bold
+                boldRes = R.font.geist_bold,
+                ext = "otf"
             ),
             UiFont(
                 id = "noto_sans",
@@ -435,7 +416,8 @@ class Settings(context: Context) {
                 regularRes = R.font.noto_sans,
                 mediumRes = R.font.noto_sans_medium,
                 semiBoldRes = R.font.noto_sans_semibold,
-                boldRes = R.font.noto_sans_bold
+                boldRes = R.font.noto_sans_bold,
+                ext = "ttf"
             ),
             UiFont(
                 id = "dm_sans",
@@ -443,7 +425,8 @@ class Settings(context: Context) {
                 regularRes = R.font.dm_sans,
                 mediumRes = R.font.dm_sans_medium,
                 semiBoldRes = R.font.dm_sans_semibold,
-                boldRes = R.font.dm_sans_bold
+                boldRes = R.font.dm_sans_bold,
+                ext = "ttf"
             ),
             UiFont(
                 id = "rubik",
@@ -451,7 +434,8 @@ class Settings(context: Context) {
                 regularRes = R.font.rubik,
                 mediumRes = R.font.rubik_medium,
                 semiBoldRes = R.font.rubik_semibold,
-                boldRes = R.font.rubik_bold
+                boldRes = R.font.rubik_bold,
+                ext = "ttf"
             ),
             UiFont(
                 id = "outfit",
@@ -459,7 +443,8 @@ class Settings(context: Context) {
                 regularRes = R.font.outfit,
                 mediumRes = R.font.outfit_medium,
                 semiBoldRes = R.font.outfit_semibold,
-                boldRes = R.font.outfit_bold
+                boldRes = R.font.outfit_bold,
+                ext = "ttf"
             )
         )
 
@@ -475,7 +460,13 @@ class Settings(context: Context) {
             val regularRes: Int,
             val mediumRes: Int,
             val semiBoldRes: Int,
-            val boldRes: Int
-        )
+            val boldRes: Int,
+            val ext: String = "ttf"
+        ) {
+            val regularAssetPath: String get() = "fonts/$id.$ext"
+            val mediumAssetPath: String get() = "fonts/${id}_medium.$ext"
+            val semiBoldAssetPath: String get() = "fonts/${id}_semibold.$ext"
+            val boldAssetPath: String get() = "fonts/${id}_bold.$ext"
+        }
     }
 }

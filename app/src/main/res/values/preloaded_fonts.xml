@@ -1,37 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <array name="preloaded_fonts" translatable="false">
-        <item>@font/plus_jakarta_sans</item>
-        <item>@font/plus_jakarta_sans_medium</item>
-        <item>@font/plus_jakarta_sans_semibold</item>
-        <item>@font/plus_jakarta_sans_bold</item>
-        <item>@font/google_sans</item>
-        <item>@font/google_sans_medium</item>
-        <item>@font/google_sans_semibold</item>
-        <item>@font/google_sans_bold</item>
-        <item>@font/inter</item>
-        <item>@font/inter_medium</item>
-        <item>@font/inter_semibold</item>
-        <item>@font/inter_bold</item>
-        <item>@font/geist</item>
-        <item>@font/geist_medium</item>
-        <item>@font/geist_semibold</item>
-        <item>@font/geist_bold</item>
-        <item>@font/noto_sans</item>
-        <item>@font/noto_sans_medium</item>
-        <item>@font/noto_sans_semibold</item>
-        <item>@font/noto_sans_bold</item>
-        <item>@font/dm_sans</item>
-        <item>@font/dm_sans_medium</item>
-        <item>@font/dm_sans_semibold</item>
-        <item>@font/dm_sans_bold</item>
-        <item>@font/rubik</item>
-        <item>@font/rubik_medium</item>
-        <item>@font/rubik_semibold</item>
-        <item>@font/rubik_bold</item>
-        <item>@font/outfit</item>
-        <item>@font/outfit_medium</item>
-        <item>@font/outfit_semibold</item>
-        <item>@font/outfit_bold</item>
-    </array>
+    <array name="preloaded_fonts" translatable="false" />
 </resources>

@@ -169,7 +169,7 @@ class LspActivity : AppCompatActivity() {
         binding.lspFilterInput.setTextColor(fg)
         binding.lspFilterInput.setHintTextColor(subtle)
         styleFilterChips()
-        ModernUiHelper.applyUiFontToViewTree(this, binding.lspRoot)
+        ModernUiHelper.installUiFontInterceptor(this, binding.lspRoot)
 
         window?.let { win ->
             win.statusBarColor = chrome

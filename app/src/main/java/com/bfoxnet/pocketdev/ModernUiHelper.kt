@@ -1,7 +1,5 @@
 package com.bfoxnet.pocketdev
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -21,6 +19,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.Window
 import android.view.WindowManager
 import android.view.animation.PathInterpolator
@@ -31,10 +30,14 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textview.MaterialTextView
 import io.github.rosemoe.sora.widget.CodeEditor
+import java.util.WeakHashMap
 
 /**
  * Material 3 Bottom Sheet, Context Menu, Confirmation Dialog, Input Dialog,
@@ -83,6 +86,8 @@ object ModernUiHelper {
     @Volatile
     private var cachedBold: Typeface? = null
 
+    private val attachedInterceptors = WeakHashMap<View, ViewTreeObserver.OnGlobalLayoutListener>()
+
     fun invalidateUiFontCache() {
         cachedFontId = ""
         cachedRegular = null
@@ -104,11 +109,22 @@ object ModernUiHelper {
         return uiFont
     }
 
+    /**
+     * Loads the embedded UI font directly from `assets/fonts/` first via `Typeface.createFromAsset`
+     * (which bypasses Android / OEM system font override hooks), falling back to `ResourcesCompat.getFont`.
+     */
+    private fun loadEmbeddedUiTypeface(context: Context, assetPath: String, resId: Int, fallback: Typeface): Typeface {
+        return runCatching {
+            Typeface.createFromAsset(context.applicationContext.assets, assetPath)
+        }.getOrElse {
+            runCatching { ResourcesCompat.getFont(context, resId) }.getOrNull() ?: fallback
+        }
+    }
+
     fun appFontRegular(context: Context): Typeface {
         val uiFont = ensureFontCache(context)
         cachedRegular?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.regularRes) }.getOrNull()
-            ?: Typeface.SANS_SERIF
+        val tf = loadEmbeddedUiTypeface(context, uiFont.regularAssetPath, uiFont.regularRes, Typeface.SANS_SERIF)
         cachedRegular = tf
         return tf
     }
@@ -116,8 +132,7 @@ object ModernUiHelper {
     fun appFontMedium(context: Context): Typeface {
         val uiFont = ensureFontCache(context)
         cachedMedium?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.mediumRes) }.getOrNull()
-            ?: Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        val tf = loadEmbeddedUiTypeface(context, uiFont.mediumAssetPath, uiFont.mediumRes, Typeface.SANS_SERIF)
         cachedMedium = tf
         return tf
     }
@@ -125,8 +140,7 @@ object ModernUiHelper {
     fun appFontSemiBold(context: Context): Typeface {
         val uiFont = ensureFontCache(context)
         cachedSemiBold?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.semiBoldRes) }.getOrNull()
-            ?: Typeface.create("sans-serif-medium", Typeface.BOLD)
+        val tf = loadEmbeddedUiTypeface(context, uiFont.semiBoldAssetPath, uiFont.semiBoldRes, Typeface.DEFAULT_BOLD)
         cachedSemiBold = tf
         return tf
     }
@@ -134,30 +148,112 @@ object ModernUiHelper {
     fun appFontBold(context: Context): Typeface {
         val uiFont = ensureFontCache(context)
         cachedBold?.let { return it }
-        val tf = runCatching { ResourcesCompat.getFont(context, uiFont.boldRes) }.getOrNull()
-            ?: Typeface.DEFAULT_BOLD
+        val tf = loadEmbeddedUiTypeface(context, uiFont.boldAssetPath, uiFont.boldRes, Typeface.DEFAULT_BOLD)
         cachedBold = tf
         return tf
     }
 
     /**
+     * Installs a persistent layout-pass font interceptor on [root] so even dynamically
+     * inflated `Toolbar` titles, `TabLayout` tabs, and OEM-overridden `TextView`s always
+     * render with the user's selected `uiFontFamily`.
+     */
+    fun installUiFontInterceptor(context: Context, root: View?, skipViewIds: Set<Int> = emptySet()) {
+        if (root == null) return
+        applyUiFontToViewTree(context, root, skipViewIds)
+        if (attachedInterceptors.containsKey(root)) return
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            applyUiFontToViewTree(context, root, skipViewIds)
+        }
+        attachedInterceptors[root] = listener
+        root.viewTreeObserver.addOnGlobalLayoutListener(listener)
+    }
+
+    /**
      * Recursively applies the active UI font family (`Settings.uiFontFamily`) across [root],
-     * skipping [CodeEditor] and any explicit monospace preview/code views (`tag == "monospace"`).
+     * bypassing Android/OEM system font overrides by setting both `setTypeface(tf, Typeface.NORMAL)`
+     * and `paint.typeface = tf`. Skips [CodeEditor] and explicit monospace code views.
      */
     fun applyUiFontToViewTree(context: Context, root: View?, skipViewIds: Set<Int> = emptySet()) {
-        if (root == null || root is CodeEditor) return
+        if (root == null || root is CodeEditor || root is ReTerminalView) return
         if (root.id in skipViewIds || root.tag == "monospace") return
-        if (root is TextView) {
-            val currentTf = root.typeface
-            if (currentTf != Typeface.MONOSPACE) {
-                val isBold = currentTf?.isBold == true
-                root.typeface = if (isBold) appFontBold(context) else appFontRegular(context)
+
+        val regTf = appFontRegular(context)
+        val medTf = appFontMedium(context)
+        val semiTf = appFontSemiBold(context)
+        val boldTf = appFontBold(context)
+
+        if (root is TextInputLayout) {
+            if (root.typeface !== regTf) {
+                root.typeface = regTf
             }
         }
+
+        if (root is Toolbar) {
+            for (i in 0 until root.childCount) {
+                val child = root.getChildAt(i)
+                if (child is TextView) {
+                    val isTitle = child.text == root.title
+                    val targetTf = if (isTitle) boldTf else regTf
+                    applyTypefaceBypassingSystemOverride(child, targetTf)
+                }
+            }
+        }
+
+        if (root is TabLayout) {
+            val tabStrip = root.getChildAt(0) as? ViewGroup
+            if (tabStrip != null) {
+                for (i in 0 until tabStrip.childCount) {
+                    val tabView = tabStrip.getChildAt(i)
+                    applyUiFontToTabView(tabView, semiTf, boldTf, root.selectedTabPosition == i)
+                }
+            }
+        }
+
+        if (root is TextView) {
+            val currentTf = root.typeface
+            if (currentTf !== Typeface.MONOSPACE) {
+                val targetTf = when {
+                    currentTf === boldTf || currentTf === semiTf || currentTf === medTf || currentTf === regTf -> currentTf
+                    currentTf?.isBold == true -> boldTf
+                    root is MaterialButton -> semiTf
+                    else -> {
+                        val w = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) currentTf?.weight ?: 400 else 400
+                        when {
+                            w >= 700 -> boldTf
+                            w >= 600 -> semiTf
+                            w >= 500 -> medTf
+                            else -> regTf
+                        }
+                    }
+                }
+                applyTypefaceBypassingSystemOverride(root, targetTf)
+            }
+        }
+
         if (root is ViewGroup) {
             for (i in 0 until root.childCount) {
                 applyUiFontToViewTree(context, root.getChildAt(i), skipViewIds)
             }
+        }
+    }
+
+    private fun applyUiFontToTabView(view: View?, semiTf: Typeface, boldTf: Typeface, isSelected: Boolean) {
+        if (view == null) return
+        if (view is TextView) {
+            applyTypefaceBypassingSystemOverride(view, if (isSelected) boldTf else semiTf)
+        } else if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                applyUiFontToTabView(view.getChildAt(i), semiTf, boldTf, isSelected)
+            }
+        }
+    }
+
+    private fun applyTypefaceBypassingSystemOverride(tv: TextView, targetTf: Typeface) {
+        if (tv.typeface !== targetTf || tv.paint.typeface !== targetTf) {
+            tv.setTypeface(targetTf, Typeface.NORMAL)
+            tv.paint.typeface = targetTf
+            tv.invalidate()
         }
     }
 
@@ -360,9 +456,6 @@ object ModernUiHelper {
             .start()
     }
 
-    /**
-     * Smoothly animates a view entrance (for bottom sheets and dialogs).
-     */
     private fun animateDialogEntrance(view: View, isBottomSheet: Boolean) {
         val density = view.resources.displayMetrics.density
         view.alpha = 0f
@@ -424,10 +517,6 @@ object ModernUiHelper {
         return (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.55
     }
 
-    /**
-     * Resolves the global App UI Palette (using `#B85648` primary color and fixed UI surfaces
-     * so Editor Theme changes only affect the CodeEditor, never the surrounding app UI).
-     */
     @Suppress("UNUSED_PARAMETER")
     fun resolvePalette(context: Context): Palette {
         return Palette(
@@ -485,6 +574,7 @@ object ModernUiHelper {
             )
         )
 
+        applyUiFontToViewTree(context, wrapper)
         dialog.setContentView(wrapper)
         configureBottomSheetWindow(dialog, context, maxWidthDp = 460)
         dialog.show()
@@ -626,6 +716,7 @@ object ModernUiHelper {
         btnRow.addView(confirmBtn)
 
         rootCard.addView(btnRow)
+        applyUiFontToViewTree(context, rootCard)
         dialog.setContentView(rootCard)
         configureDialogWindow(dialog, context, maxWidthDp = 360)
         dialog.show()
@@ -890,6 +981,7 @@ object ModernUiHelper {
         scroll.addView(listContainer)
         rootCard.addView(scroll)
 
+        applyUiFontToViewTree(context, rootCard)
         dialog.setContentView(rootCard)
         configureBottomSheetWindow(dialog, context, maxWidthDp = 420)
         dialog.show()
@@ -1118,6 +1210,7 @@ object ModernUiHelper {
         }
 
         rootCard.addView(btnRow)
+        applyUiFontToViewTree(context, rootCard)
         dialog.setContentView(rootCard)
         configureDialogWindow(dialog, context, maxWidthDp = 360, showKeyboard = true)
         dialog.show()

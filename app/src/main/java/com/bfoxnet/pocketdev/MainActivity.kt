@@ -159,6 +159,11 @@ class MainActivity : AppCompatActivity() {
 
         editorController = EditorController(this, binding.editor)
         editorController.setup()
+        binding.editorFoldGutter.attachToEditor(binding.editor, editorController)
+        binding.editorFoldGutter.onFoldStateChanged = { _, _ ->
+            updateStickyScrollHeader()
+            updateStatusLine()
+        }
 
         setupAppBar()
         setupEmptyStateActions()
@@ -382,18 +387,6 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.action_format_document -> {
                 formatCurrentDocument()
-                true
-            }
-            R.id.action_prettier -> {
-                startActivity(
-                    Intent(this, SettingsActivity::class.java).apply {
-                        putExtra(SettingsActivity.EXTRA_INITIAL_PAGE, SettingsActivity.PAGE_PRETTIER)
-                    }
-                )
-                true
-            }
-            R.id.action_plugins -> {
-                showPluginsDialogForCurrentFile()
                 true
             }
             R.id.action_lsp_refactor -> {
@@ -778,7 +771,7 @@ class MainActivity : AppCompatActivity() {
         binding.stickyScrollText.setTextColor(fgColor)
         binding.stickyScrollLineBadge.setTextColor(accentColor)
         binding.editor.setBackgroundColor(editorController.currentEditorBackgroundColor())
-        ModernUiHelper.applyUiFontToViewTree(
+        ModernUiHelper.installUiFontInterceptor(
             this,
             binding.mainDrawerLayout,
             skipViewIds = setOf(binding.editor.id, binding.stickyScrollText.id, binding.buildStdinInput.id)
@@ -814,6 +807,7 @@ class MainActivity : AppCompatActivity() {
         editorController.applyEditorTheme(settings.editorTheme)
         editorController.applyFontSettings()
         editorController.editor.setWordwrap(settings.wordWrap)
+        binding.editorFoldGutter.refreshFoldableLines(force = true)
         applyThemeChrome()
         refreshFileTree()
         runLspAnalysisForCurrentFile()
@@ -915,8 +909,7 @@ class MainActivity : AppCompatActivity() {
 
         val tools = listOf(
             QuickToolIcon(R.drawable.ic_lsp, "Code Actions") { showLspCodeActionsDialog() },
-            QuickToolIcon(R.drawable.ic_code, "Plugins") { showPluginsDialogForCurrentFile() },
-            QuickToolIcon(R.drawable.ic_format_align, "Prettier Format") { formatCurrentDocument() },
+            QuickToolIcon(R.drawable.ic_format_align, "Format") { formatCurrentDocument() },
             QuickToolIcon(R.drawable.ic_comment, "Toggle Comment") {
                 editorController.toggleLineComment(currentFile?.displayName ?: "")
             },
@@ -926,10 +919,6 @@ class MainActivity : AppCompatActivity() {
             QuickToolIcon(R.drawable.ic_move_down, "Move Line Down") { editorController.moveLineDown() },
             QuickToolIcon(R.drawable.ic_copy_up, "Duplicate Line Up") { editorController.copyLineUp() },
             QuickToolIcon(R.drawable.ic_copy_down, "Duplicate Line Down") { editorController.copyLineDown() },
-            QuickToolIcon(R.drawable.ic_expand, "Toggle Fold") {
-                val msg = editorController.toggleFoldBlockAtCursor()
-                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-            },
             QuickToolIcon(R.drawable.ic_delete, "Delete Line") { editorController.deleteCurrentLine() },
             QuickToolIcon(R.drawable.ic_undo, "Undo") { binding.editor.undo() },
             QuickToolIcon(R.drawable.ic_redo, "Redo") { binding.editor.redo() }
@@ -1208,6 +1197,7 @@ class MainActivity : AppCompatActivity() {
             .setDuration(150L)
             .setInterpolator(ModernUiHelper.SPRING_INTERPOLATOR)
             .start()
+        binding.editorFoldGutter.refreshFoldableLines(force = true)
         renderTabs()
         runLspAnalysisForCurrentFile(force = true, notifyStdioServer = true)
         updateStatusLine()
@@ -2996,6 +2986,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.editor.subscribeAlways<ScrollEvent> {
             updateStickyScrollHeader()
+            binding.editorFoldGutter.postInvalidateOnAnimation()
         }
         binding.editor.subscribeAlways<ContentChangeEvent> { event ->
             val isCharAddedOrRemoved = event.action == ContentChangeEvent.ACTION_INSERT ||
@@ -3044,6 +3035,7 @@ class MainActivity : AppCompatActivity() {
                     autoSaveHandler.removeCallbacks(autoSaveRunnable)
                     autoSaveHandler.postDelayed(autoSaveRunnable, settings.autoSaveDelayMs.toLong())
                 }
+                binding.editorFoldGutter.refreshFoldableLines(force = false)
                 runLspAnalysisForCurrentFile(force = false, notifyStdioServer = true)
             }
             updateStatusLine()
@@ -3390,26 +3382,7 @@ class MainActivity : AppCompatActivity() {
                     openProjectSidebar()
                 }
             ),
-            ModernUiHelper.MenuOption(
-                id = 5,
-                title = "Toggle Fold",
-                subtitle = "Fold or unfold block at Ln ${line0 + 1}",
-                iconRes = R.drawable.ic_expand,
-                action = {
-                    val msg = editorController.toggleFoldBlockAtCursor()
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                }
-            ),
-            ModernUiHelper.MenuOption(
-                id = 6,
-                title = "Unfold All",
-                subtitle = "Expand all folded blocks",
-                iconRes = R.drawable.ic_expand,
-                action = {
-                    val count = editorController.unfoldAllBlocks()
-                    Toast.makeText(this, "Unfolded $count block(s)", Toast.LENGTH_SHORT).show()
-                }
-            ),
+
             ModernUiHelper.MenuOption(
                 id = 7,
                 title = "Format Document",

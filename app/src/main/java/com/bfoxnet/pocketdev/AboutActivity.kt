@@ -110,6 +110,6 @@ class AboutActivity : AppCompatActivity() {
             controller.isAppearanceLightStatusBars = false
             controller.isAppearanceLightNavigationBars = false
         }
-        ModernUiHelper.applyUiFontToViewTree(this, binding.aboutRoot)
+        ModernUiHelper.installUiFontInterceptor(this, binding.aboutRoot)
     }
 }

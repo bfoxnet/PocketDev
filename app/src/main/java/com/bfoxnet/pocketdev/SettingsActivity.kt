@@ -473,7 +473,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Apply active UI font family across Settings view hierarchy (skipping code preview views)
-        ModernUiHelper.applyUiFontToViewTree(
+        ModernUiHelper.installUiFontInterceptor(
             this,
             binding.settingsRoot,
             skipViewIds = setOf(binding.previewCodeText.id, binding.prettierPreviewCodeText.id)
